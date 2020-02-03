@@ -59,10 +59,39 @@ if db.isValid():
         else:
             err = db.lastError()
             print (err.driverText())
-        
 
-        start = str(42887)
-        end = str(42890)
+        start_zone = 7137
+        end_zone = 7320
+
+        # Starting points for the selected OD-pair
+        query1 = db.exec_("SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+                ORDER BY id, distance) AS score, id, lid, start_node, distance \
+                FROM( SELECT emme.id, lid,start_node, ST_distance(geom, emme_centroid) AS \
+                distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+                emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start_zone) + " \
+                OR id = " + str(end_zone) + ") AS emme \
+                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+                WHERE score = 1")
+
+        zid = []
+        lid = []
+        node = []
+
+        # Saving SQL answer into matrix
+        while query1.next():
+            zid.append(query1.value(1))
+            lid.append(query1.value(2))
+            node.append(query1.value(3))
+
+        print("Zone is: " + str(zid[0]))
+        print("Node is: " + str(node[0]))
+        print("Zone to link allocation finsihed")
+
+        start = str(node[0])
+        end = str(node[1])
+
+        #start = str(42887)
+        #end = str(42890)
         
       
         db.exec_("DROP TABLE if exists temp_table1")
@@ -163,7 +192,8 @@ if db.isValid():
             layert = QgsVectorLayer(uri.uri(),"route "+str(i),"postgres")
             QgsProject.instance().addMapLayer(layert)
             i=i+1
-        
+
+        print("Testing pycharm")
 toc();
 ####################################
 
