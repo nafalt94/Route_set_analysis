@@ -30,7 +30,7 @@ from PyQt5.QtSql import *
 from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
-
+# Testing python in github.
 tic()
 ## Connect to the database
 ##################################
