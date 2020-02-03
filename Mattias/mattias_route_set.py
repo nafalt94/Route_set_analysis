@@ -35,9 +35,8 @@ from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
 tic()
+
 # Remove route layers.
-
-
 layers = QgsProject.instance().mapLayers()
 
 for layer_id, layer in layers.items():
