@@ -52,6 +52,9 @@ if db.isValid():
         layert = QgsVectorLayer(uri.uri(),"route 1","postgres")
         QgsProject.instance().addMapLayer(layert)
         
-        print("kod klar")
+        print("TESt")
+        
+        
+        ## TESTING
 
 
