@@ -53,5 +53,8 @@ if db.isValid():
         QgsProject.instance().addMapLayer(layert)
         
         print("kod klar")
+        
+        
+        ## TESTING
 
 
