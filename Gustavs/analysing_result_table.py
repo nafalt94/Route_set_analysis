@@ -74,10 +74,15 @@ def odEffect(start, end, lid):
                                                                                         " did NOT IN (select did from result_table where lid = "+str(removed_lid)+")")
     query1.next()
     id_alt = str(query1.value(0))
+    print("id_alt är: "+ id_alt)
 
-    if id_alt == "1":
+    if id_alt== "NULL":
+        #There is no routes with start and end zone
+        return 1000;
+
+    elif  id_alt == "1":
         #print("Zon påverkas inte")
-        result = 0
+        return 0
     else:
         #print("Zon påverkas och bästa id är:" + id_alt)
 
@@ -95,10 +100,9 @@ def odEffect(start, end, lid):
         #print("Cost of alternative route: " + cost_alt)
 
         # Proportion of extra cost of alternative route in relation to opt route
-        result = (float(cost_alt)/float(cost_opt)-1)
+        return (float(cost_alt)/float(cost_opt)-1)
 
 
-    return result
 
 start_zone = 7137
 end_zone = 7320
@@ -110,12 +114,19 @@ removed_lid = 83896
 # best påverkas ej
 #removed_lid = 81118
 
-#start_array = [ 7137 , 7320, 1111]
+#List of OD-pairs
+start_list = [ 7137, 7162 ,7557, 6901, 6872]
+end_list = [7320, 6836, 6968, 7934, 7985]
 
-print(""+ str(start_array(1)))
+i=0
+while i < len(start_list):
+    result_test = odEffect(start_list[i], end_list[i], removed_lid)
+    print("Result of "+str(i)+ " is: " + str(result_test))
+    i = i+1
 
-result_test = odEffect(start_zone, end_zone,removed_lid)
-print("Result is: " + str(result_test))
+
+# result_test = odEffect(start_zone, end_zone,removed_lid)
+# print("Result is: " + str(result_test))
 
 toc();
 
