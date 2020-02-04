@@ -32,6 +32,15 @@ from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
 
 tic()
+
+# Remove route layers.
+layers = QgsProject.instance().mapLayers()
+
+for layer_id, layer in layers.items():
+    print(layer.id())
+    if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_2006_sthlm_lan" :
+        QgsProject.instance().removeMapLayer(layer.id())
+
 ## Connect to the database
 ##################################
 uri = QgsDataSourceUri()
