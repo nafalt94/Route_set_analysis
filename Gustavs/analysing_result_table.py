@@ -36,7 +36,7 @@ tic()
 ##################################
 uri = QgsDataSourceUri()
 # set host name, port, database name, username and password
-uri.setConnection("localhost", "5432", "postgres", "postgres", "gustav")
+uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
 # set database schema, table name, geometry column and optionally
 # subset (WHERE clause)
 vlayer = QgsVectorLayer(uri.uri(False), "layer name you like", "postgres")
@@ -63,12 +63,35 @@ if db.isValid():
         start_zone = 7137
         end_zone = 7320
 
+        #Trean bäst
         removed_lid = 80669
+        # Tvåan näst bäst
+        #removed_lid = 83896
+        # best påverkas ej
+        #removed_lid = 81118
 
-
-        query1 = db.exec_("SELECT * FROM result_table WHERE did NOT IN (select did from result_table where lid = "+str(removed_lid)+")")
+        #Finding best, non-affected alternative route
+        query1 = db.exec_("SELECT MIN(did) FROM result_table WHERE did NOT IN (select did from result_table where lid = "+str(removed_lid)+")")
         query1.next()
-        print("Test av printning:" + str(query1.value(1)))
+        id_alt = str(query1.value(0))
+
+        if id_alt == "1":
+            print("Zon påverkas inte")
+        else:
+            print("Zon påverkas och bästa id är:" + id_alt)
+
+            # Fetching cost of the optimal route
+            query2 = db.exec_("SELECT sum(link_cost) from result_table where did = 1 OR did = "+str(id_alt)+" group by did")
+            query2.next()
+            cost_opt = str(query2.value(0))
+            print("Cost of optimal route: " + cost_opt)
+
+            # Alternative cost
+            query2.next()
+            cost_alt = str(query2.value(0))
+            print("Cost of alternative route: " + cost_alt)
+            result = round(100*float(cost_alt)/float(cost_opt)-100)
+            print("Best alternative route cost: "+ str(result)+" percent longer")
 
 toc();
 
