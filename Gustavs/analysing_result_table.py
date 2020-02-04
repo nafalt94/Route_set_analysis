@@ -64,14 +64,11 @@ if db.isValid():
 # od_effect(start zone,end zone,LID of the removed link)
 # Function returns proportion of extra cost of alternative route in relation to opt route
 def odEffect(start, end, lid):
-    start_zone = start
-    end_zone = end
-    removed_lid = lid
 
     #Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM result_table WHERE"
-                      " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                                                                                        " did NOT IN (select did from result_table where lid = "+str(removed_lid)+")")
+                      " start_zone = "+str(start)+" AND end_zone = "+str(end)+" AND "
+                    " did NOT IN (select did from result_table where lid = "+str(lid)+")")
     query1.next()
     id_alt = str(query1.value(0))
     print("id_alt är: "+ id_alt)
@@ -88,8 +85,8 @@ def odEffect(start, end, lid):
 
         # Fetching cost of the optimal route
         query2 = db.exec_("SELECT sum(link_cost) from result_table where "
-                          " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                                                                                            "did = 1 OR did = "+str(id_alt)+" group by did")
+                          " start_zone = "+str(start)+" AND end_zone = "+str(end)+" AND "
+                         "did = 1 OR did = "+str(id_alt)+" group by did")
         query2.next()
         cost_opt = str(query2.value(0))
         #print("Cost of optimal route: " + cost_opt)
@@ -101,11 +98,6 @@ def odEffect(start, end, lid):
 
         # Proportion of extra cost of alternative route in relation to opt route
         return (float(cost_alt)/float(cost_opt)-1)
-
-
-
-start_zone = 7137
-end_zone = 7320
 
 #Trean bäst
 #removed_lid = 80669
@@ -124,9 +116,13 @@ while i < len(start_list):
     print("Result of "+str(i)+ " is: " + str(result_test))
     i = i+1
 
-
 # result_test = odEffect(start_zone, end_zone,removed_lid)
 # print("Result is: " + str(result_test))
+
+symbols = self.vlayer.rendererV2().symbols()
+symbol = symbols[0]
+symbol.setColor(QColor.fromRgb(50,50,250))
+
 
 toc();
 
