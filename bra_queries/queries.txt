@@ -1,0 +1,2 @@
+#Skapa cost_table
+select ST_Length(geom)/speed AS link_cost, * into cost_table from model_graph
