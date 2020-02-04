@@ -34,7 +34,6 @@ def removeRoutesLayers():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap":
             QgsProject.instance().removeMapLayer(layer.id())
-<<<<<<< HEAD
 def genStartNode(start, end):
     query1 = db.exec_("SELECT start_node FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
                     ORDER BY id, distance) AS score, id, lid, start_node, distance \
@@ -44,62 +43,6 @@ def genStartNode(start, end):
                     OR id = " + str(end_zone) + ") AS emme \
                     WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
                     WHERE score = 1")
-=======
-
-
-# End of Function definitions
-
-TicToc = TicTocGenerator()
-tic()
-
-
-## Connect to the database
-##################################
-uri = QgsDataSourceUri()
-# set host name, port, database name, username and password
-uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
-# set database schema, table name, geometry column and optionally
-# subset (WHERE clause)
-vlayer = QgsVectorLayer(uri.uri(False), "layer name you like", "postgres")
-
-print(uri.uri())
-
-db = QSqlDatabase.addDatabase('QPSQL')
-
-
-
-if db.isValid():
-    print("QPSQL db is valid")
-    # set the parameters needed for the connection
-    db.setHostName(uri.host())
-    db.setDatabaseName(uri.database())
-    db.setPort(int(uri.port()))
-    db.setUserName(uri.username())
-    db.setPassword(uri.password())
-    # open (create) the connection
-    if db.open():
-        print("Opened %s" % uri.uri())
-    else:
-        err = db.lastError()
-        print(err.driverText())
-
-    start_zone = 7137
-    end_zone = 7320
-
-    # Starting points for the selected OD-pair
-    query1 = db.exec_("SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
-                ORDER BY id, distance) AS score, id, lid, start_node, distance \
-                FROM( SELECT emme.id, lid,start_node, ST_distance(geom, emme_centroid) AS \
-                distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
-                emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start_zone) + " \
-                OR id = " + str(end_zone) + ") AS emme \
-                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
-                WHERE score = 1")
-
-
-    zid = []
-    lid = []
->>>>>>> c549359070df693a012d5ae0e0965640bd46d03b
     node = []
     counter = 0;
     # Saving SQL answer into matrix
@@ -185,7 +128,6 @@ def printRoutes(nr_routes):
         layert = QgsVectorLayer(uri.uri(), "route " + str(i), "postgres")
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
-<<<<<<< HEAD
 
 # End of Function definitions
 
@@ -236,11 +178,4 @@ if db.isValid():
 
 toc();
 
-
-
-
-=======
->>>>>>> c549359070df693a012d5ae0e0965640bd46d03b
-
-toc();
 
