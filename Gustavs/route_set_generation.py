@@ -38,14 +38,14 @@ layers = QgsProject.instance().mapLayers()
 
 for layer_id, layer in layers.items():
     print(layer.id())
-    if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_2006_sthlm_lan" :
+    if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" :
         QgsProject.instance().removeMapLayer(layer.id())
 
 ## Connect to the database
 ##################################
 uri = QgsDataSourceUri()
 # set host name, port, database name, username and password
-uri.setConnection("localhost", "5432", "postgres", "postgres", "gustav")
+uri.setConnection("localhost", "5432", "postgres", "postgres", "password123")
 # set database schema, table name, geometry column and optionally
 # subset (WHERE clause)
 vlayer = QgsVectorLayer(uri.uri(False), "layer name you like", "postgres")
@@ -206,6 +206,11 @@ if db.isValid():
 toc();
 ####################################
 
+def compare(test1, test2, t):
 
+    if test1 / test2 < t:
+        return true
+    else:
+        return false
 
 
