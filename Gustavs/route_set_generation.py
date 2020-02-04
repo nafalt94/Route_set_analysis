@@ -38,7 +38,8 @@ layers = QgsProject.instance().mapLayers()
 
 for layer_id, layer in layers.items():
     print(layer.id())
-    if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" :
+    if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" \
+            and str(layer.name()) != "labels" and str(layer.name()) != "OpenStreetMap":
         QgsProject.instance().removeMapLayer(layer.id())
 
 ## Connect to the database
