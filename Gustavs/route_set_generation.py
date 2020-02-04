@@ -31,83 +31,32 @@ def removeRoutesLayers():
     layers = QgsProject.instance().mapLayers()
 
     for layer_id, layer in layers.items():
-        print(layer.id())
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap":
             QgsProject.instance().removeMapLayer(layer.id())
-
-
-# End of Function definitions
-
-TicToc = TicTocGenerator()
-tic()
-
-
-## Connect to the database
-##################################
-uri = QgsDataSourceUri()
-# set host name, port, database name, username and password
-uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
-# set database schema, table name, geometry column and optionally
-# subset (WHERE clause)
-vlayer = QgsVectorLayer(uri.uri(False), "layer name you like", "postgres")
-
-print(uri.uri())
-
-db = QSqlDatabase.addDatabase('QPSQL')
-
-
-
-if db.isValid():
-    print("QPSQL db is valid")
-    # set the parameters needed for the connection
-    db.setHostName(uri.host())
-    db.setDatabaseName(uri.database())
-    db.setPort(int(uri.port()))
-    db.setUserName(uri.username())
-    db.setPassword(uri.password())
-    # open (create) the connection
-    if db.open():
-        print("Opened %s" % uri.uri())
-    else:
-        err = db.lastError()
-        print(err.driverText())
-
-    start_zone = 7137
-    end_zone = 7320
-
-    # Starting points for the selected OD-pair
-    query1 = db.exec_("SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
-                ORDER BY id, distance) AS score, id, lid, start_node, distance \
-                FROM( SELECT emme.id, lid,start_node, ST_distance(geom, emme_centroid) AS \
-                distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
-                emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start_zone) + " \
-                OR id = " + str(end_zone) + ") AS emme \
-                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
-                WHERE score = 1")
-
-
-    zid = []
-    lid = []
+def genStartNode(start, end):
+    query1 = db.exec_("SELECT start_node FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+                    ORDER BY id, distance) AS score, id, lid, start_node, distance \
+                    FROM( SELECT emme.id, lid,start_node, ST_distance(geom, emme_centroid) AS \
+                    distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+                    emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start_zone) + " \
+                    OR id = " + str(end_zone) + ") AS emme \
+                    WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+                    WHERE score = 1")
     node = []
-
+    counter = 0;
     # Saving SQL answer into matrix
     while query1.next():
-        zid.append(query1.value(1))
-        lid.append(query1.value(2))
-        node.append(query1.value(3))
-
-    print("Zone is: " + str(zid[0]))
-    print("Node is: " + str(node[0]))
-    print("Zone to link allocation finsihed")
-
-    start = str(node[0])
-    end = str(node[1])
-
+        counter += 1
+        node.append(query1.value(0))
+    if counter != 2:
+        raise Exception('No start or end node in Zones')
+    return node
+def routeSetGeneration(start, end):
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost \
-        ,3*link_cost AS reverse_cost FROM cost_table'," + start + "," + end + ") INNER JOIN cost_table ON(edge = lid)")
+            ,3*link_cost AS reverse_cost FROM cost_table'," + start + "," + end + ") INNER JOIN cost_table ON(edge = lid)")
 
     # Saving route 1 in query
     temp_q = db.exec_("SELECT * FROM temp_table1 ORDER BY path_seq")
@@ -123,36 +72,31 @@ if db.isValid():
 
     cost_q.next()
     route1_cost = cost_q.value(0)
-    print("Current cost " + str(route1_cost))
+    print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
     ## Calculationg alternative routes
     i = 2
 
-    threshold = 1.5
     nr_routes = 1
 
     while comp(route_stop, route1_cost, threshold):
-        print("Loopar")
-        # print(route_stop)
 
         # Calculating penalizing term (P. 14 in thesis work)
-
         # Delta value
         delta_query = db.exec_("Select COUNT(*) from result_table")
         delta_query.next()
         delta = delta_query.value(0)
 
         # Parameter
-        my = 0.5
 
         # Route 2
         db.exec_("DROP TABLE if exists temp_table2")
         route_2 = db.exec_("SELECT * INTO temp_table2 from pgr_dijkstra('SELECT id, source, target, CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
-            FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 100000000 AS reverse_cost \
-            FROM cost_table) AS subq \
-            LEFT JOIN (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(" + str(delta) + ") AS cost from result_table group by lid ) AS pen ON \
-            (subq.id = pen.edge)'," + start + "," + end + ")INNER JOIN cost_table ON(edge = lid)")
+                FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 100000000 AS reverse_cost \
+                FROM cost_table) AS subq \
+                LEFT JOIN (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(" + str(delta) + ") AS cost from result_table group by lid ) AS pen ON \
+                (subq.id = pen.edge)'," + start + "," + end + ")INNER JOIN cost_table ON(edge = lid)")
 
         # LEFT JOIN (SELECT edge, cost + (cost/"+str(my)+")*LN("+str(delta)+") AS cost FROM temp_table1) AS pen ON (subq.id = pen.edge)',"+start+","+end+")INNER JOIN model_graph.model_graph ON(edge = lid)")
 
@@ -163,11 +107,9 @@ if db.isValid():
         cost_q = db.exec_(
             "SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
-        print("Current cost:" + str(i) + ":  " + str(cost_q.value(0)))
+        print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
 
         route_stop = cost_q.value(0)
-        print("test:")
-        print(route_stop)
 
         if comp(route_stop, route1_cost, threshold):
             db.exec_("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, " + str(
@@ -176,9 +118,9 @@ if db.isValid():
             db.exec_("DROP TABLE if exists temp_table1")
             db.exec_("SELECT * INTO temp_table1 from temp_table2")
             i = i + 1
-            print(i)
             nr_routes = nr_routes + 1
-
+    return nr_routes
+def printRoutes(nr_routes):
     i = 1
     while i <= nr_routes:
         sqlcall = "(SELECT * FROM result_table WHERE did=" + str(i) + ")"
@@ -187,5 +129,53 @@ if db.isValid():
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
+# End of Function definitions
+
+TicToc = TicTocGenerator()
+tic()
+removeRoutesLayers()
+
+# Connect to the database can be done in functions if we make that work
+uri = QgsDataSourceUri()
+# set host name, port, database name, username and password
+uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
+print(uri.uri())
+db = QSqlDatabase.addDatabase('QPSQL')
+
+# Variable definitions
+my = 0.5
+threshold = 1.5
+
+if db.isValid():
+    print("QPSQL db is valid")
+    db.setHostName(uri.host())
+    db.setDatabaseName(uri.database())
+    db.setPort(int(uri.port()))
+    db.setUserName(uri.username())
+    db.setPassword(uri.password())
+    # open (create) the connection
+    if db.open():
+        print("Opened %s" % uri.uri())
+    else:
+        err = db.lastError()
+        print(err.driverText())
+
+
+    start_zone = 7137
+    #start_zone = 7066
+    end_zone = 7320
+    #end_zone = 7748
+
+    node = genStartNode(start_zone, end_zone)
+
+    start = str(node[0])
+    end = str(node[1])
+
+    nr_routes = routeSetGeneration(start, end)
+
+    printRoutes(nr_routes)
+
+
 toc();
+
 
