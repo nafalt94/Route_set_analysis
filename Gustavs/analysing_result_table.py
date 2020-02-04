@@ -1,6 +1,7 @@
 ## TIC TOC
 import time
 
+
 def TicTocGenerator():
     # Generator that returns time differences
     ti = 0           # initial time
@@ -60,38 +61,61 @@ if db.isValid():
             err = db.lastError()
             print (err.driverText())
 
-        start_zone = 7137
-        end_zone = 7320
+# od_effect(start zone,end zone,LID of the removed link)
+# Function returns proportion of extra cost of alternative route in relation to opt route
+def odEffect(start, end, lid):
+    start_zone = start
+    end_zone = end
+    removed_lid = lid
 
-        #Trean bäst
-        removed_lid = 80669
-        # Tvåan näst bäst
-        #removed_lid = 83896
-        # best påverkas ej
-        #removed_lid = 81118
+    #Finding best, non-affected alternative route
+    query1 = db.exec_("SELECT MIN(did) FROM result_table WHERE"
+                      " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
+                                                                                        " did NOT IN (select did from result_table where lid = "+str(removed_lid)+")")
+    query1.next()
+    id_alt = str(query1.value(0))
 
-        #Finding best, non-affected alternative route
-        query1 = db.exec_("SELECT MIN(did) FROM result_table WHERE did NOT IN (select did from result_table where lid = "+str(removed_lid)+")")
-        query1.next()
-        id_alt = str(query1.value(0))
+    if id_alt == "1":
+        #print("Zon påverkas inte")
+        result = 0
+    else:
+        #print("Zon påverkas och bästa id är:" + id_alt)
 
-        if id_alt == "1":
-            print("Zon påverkas inte")
-        else:
-            print("Zon påverkas och bästa id är:" + id_alt)
+        # Fetching cost of the optimal route
+        query2 = db.exec_("SELECT sum(link_cost) from result_table where "
+                          " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
+                                                                                            "did = 1 OR did = "+str(id_alt)+" group by did")
+        query2.next()
+        cost_opt = str(query2.value(0))
+        #print("Cost of optimal route: " + cost_opt)
 
-            # Fetching cost of the optimal route
-            query2 = db.exec_("SELECT sum(link_cost) from result_table where did = 1 OR did = "+str(id_alt)+" group by did")
-            query2.next()
-            cost_opt = str(query2.value(0))
-            print("Cost of optimal route: " + cost_opt)
+        # Alternative cost
+        query2.next()
+        cost_alt = str(query2.value(0))
+        #print("Cost of alternative route: " + cost_alt)
 
-            # Alternative cost
-            query2.next()
-            cost_alt = str(query2.value(0))
-            print("Cost of alternative route: " + cost_alt)
-            result = round(100*float(cost_alt)/float(cost_opt)-100)
-            print("Best alternative route cost: "+ str(result)+" percent longer")
+        # Proportion of extra cost of alternative route in relation to opt route
+        result = (float(cost_alt)/float(cost_opt)-1)
+
+
+    return result
+
+start_zone = 7137
+end_zone = 7320
+
+#Trean bäst
+#removed_lid = 80669
+# Tvåan näst bäst
+removed_lid = 83896
+# best påverkas ej
+#removed_lid = 81118
+
+#start_array = [ 7137 , 7320, 1111]
+
+print(""+ str(start_array(1)))
+
+result_test = odEffect(start_zone, end_zone,removed_lid)
+print("Result is: " + str(result_test))
 
 toc();
 
