@@ -1,4 +1,6 @@
-- Se till att vi inte bestraffar länkar med samma kostnad varje gång. Se t.ex. följande: 
+   - Se till att vi inte bestraffar länkar med samma kostnad varje gång. Se t.ex. följande: 
    SELECT (cost - link_cost) as real_cost,* FROM result_table where did = 2 order by agg_cost
+   
+   - Försöka hitta litteratur på hur vilka värden på my och gamma som är bra.
  
  
