@@ -116,7 +116,7 @@ if db.isValid():
         
         # Result table creating
         db.exec_("DROP TABLE if exists result_table")
-        db.exec_("SELECT "+start_zone+" AS start_zone, "+start_zone+" AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
+        db.exec_("SELECT "+str(start_zone)+" AS start_zone, "+str(start_zone)+" AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
         #db.exec_("")
 #        # Printing route 1 
 #        sqlcall = "(SELECT * FROM temp_table1)"
@@ -175,7 +175,7 @@ if db.isValid():
             print(route_stop)
             
             if route_stop/route1_cost < threshold:
-                db.exec_("INSERT INTO result_table SELECT "+start_zone+" AS start_zone, "+start_zone+" AS end_zone, "+str(i)+" AS did,*  FROM temp_table2")
+                db.exec_("INSERT INTO result_table SELECT "+str(start_zone)+" AS start_zone, "+str(start_zone)+" AS end_zone, "+str(i)+" AS did,*  FROM temp_table2")
             
                 db.exec_("DROP TABLE if exists temp_table1")
                 db.exec_("SELECT * INTO temp_table1 from temp_table2")
