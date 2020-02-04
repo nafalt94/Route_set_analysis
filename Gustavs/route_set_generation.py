@@ -45,7 +45,7 @@ for layer_id, layer in layers.items():
 ##################################
 uri = QgsDataSourceUri()
 # set host name, port, database name, username and password
-uri.setConnection("localhost", "5432", "postgres", "postgres", "password123")
+uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
 # set database schema, table name, geometry column and optionally
 # subset (WHERE clause)
 vlayer = QgsVectorLayer(uri.uri(False), "layer name you like", "postgres")
@@ -206,11 +206,6 @@ if db.isValid():
 toc();
 ####################################
 
-def compare(test1, test2, t):
 
-    if test1 / test2 < t:
-        return true
-    else:
-        return false
 
 
