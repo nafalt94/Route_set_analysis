@@ -5,6 +5,7 @@ from PyQt5.QtSql import *
 from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
+
 # Function definitions
 def TicTocGenerator():
     # Generator that returns time differences
@@ -14,19 +15,27 @@ def TicTocGenerator():
         ti = tf
         tf = time.time()
         yield tf - ti  # returns the time difference
+
+
 def toc(tempBool=True):
     # Prints the time difference yielded by generator instance TicToc
     tempTimeInterval = next(TicToc)
     if tempBool:
         print("Elapsed time: %f seconds.\n" % tempTimeInterval)
+
+
 def tic():
     # Records a time in TicToc, marks the beginning of a time interval
     toc(False)
+
+
 def comp(var1, var2, t):
     if var1 / var2 < t:
         return True
     else:
         return False
+
+
 def removeRoutesLayers():
     layers = QgsProject.instance().mapLayers()
 
@@ -34,6 +43,8 @@ def removeRoutesLayers():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap":
             QgsProject.instance().removeMapLayer(layer.id())
+
+
 def genStartNode(start, end):
     query1 = db.exec_("SELECT start_node FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
                     ORDER BY id, distance) AS score, id, lid, start_node, distance \
@@ -52,6 +63,8 @@ def genStartNode(start, end):
     if counter != 2:
         raise Exception('No start or end node in Zones')
     return node
+
+
 def routeSetGeneration(start, end):
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
@@ -65,7 +78,8 @@ def routeSetGeneration(start, end):
 
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
-    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
+    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(
+        end_zone) + " AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
 
     # Getting the agg. cost for best route
     cost_q = db.exec_("SELECT agg_cost FROM temp_table1 ORDER BY agg_cost DESC")
@@ -112,7 +126,8 @@ def routeSetGeneration(start, end):
         route_stop = cost_q.value(0)
 
         if comp(route_stop, route1_cost, threshold):
-            db.exec_("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, " + str(
+            db.exec_("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(
+                end_zone) + " AS end_zone, " + str(
                 i) + " AS did,*  FROM temp_table2")
 
             db.exec_("DROP TABLE if exists temp_table1")
@@ -120,6 +135,8 @@ def routeSetGeneration(start, end):
             i = i + 1
             nr_routes = nr_routes + 1
     return nr_routes
+
+
 def printRoutes(nr_routes):
     i = 1
     while i <= nr_routes:
@@ -128,6 +145,7 @@ def printRoutes(nr_routes):
         layert = QgsVectorLayer(uri.uri(), "route " + str(i), "postgres")
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
+
 
 # End of Function definitions
 
@@ -160,11 +178,10 @@ if db.isValid():
         err = db.lastError()
         print(err.driverText())
 
-
     start_zone = 7137
-    #start_zone = 7066
+    # start_zone = 7066
     end_zone = 7320
-    #end_zone = 7748
+    # end_zone = 7748
 
     node = genStartNode(start_zone, end_zone)
 
@@ -175,7 +192,4 @@ if db.isValid():
 
     printRoutes(nr_routes)
 
-
 toc();
-
-
