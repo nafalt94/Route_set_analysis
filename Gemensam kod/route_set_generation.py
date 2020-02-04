@@ -65,11 +65,11 @@ def genStartNode(start, end):
     return node
 
 
-def routeSetGeneration(start, end):
+def routeSetGeneration(start, end, start_zone, end_zone):
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost \
-            ,3*link_cost AS reverse_cost FROM cost_table'," + start + "," + end + ") INNER JOIN cost_table ON(edge = lid)")
+            ,3*link_cost AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
     # Saving route 1 in query
     temp_q = db.exec_("SELECT * FROM temp_table1 ORDER BY path_seq")
@@ -78,8 +78,7 @@ def routeSetGeneration(start, end):
 
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
-    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(
-        end_zone) + " AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
+    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
 
     # Getting the agg. cost for best route
     cost_q = db.exec_("SELECT agg_cost FROM temp_table1 ORDER BY agg_cost DESC")
@@ -101,16 +100,16 @@ def routeSetGeneration(start, end):
         delta_query = db.exec_("Select COUNT(*) from result_table")
         delta_query.next()
         delta = delta_query.value(0)
-
         # Parameter
 
         # Route 2
         db.exec_("DROP TABLE if exists temp_table2")
-        route_2 = db.exec_("SELECT * INTO temp_table2 from pgr_dijkstra('SELECT id, source, target, CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
+        db.exec_("SELECT * INTO temp_table2 from pgr_dijkstra('SELECT id, source, target, CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
                 FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 100000000 AS reverse_cost \
-                FROM cost_table) AS subq \
-                LEFT JOIN (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(" + str(delta) + ") AS cost from result_table group by lid ) AS pen ON \
-                (subq.id = pen.edge)'," + start + "," + end + ")INNER JOIN cost_table ON(edge = lid)")
+                FROM cost_table) AS subq LEFT JOIN (select lid as edge, max(cost) + (max(cost)/("+str(my)+" * min(cost)))*LN("+str(delta)+") AS cost from result_table group by lid ) AS pen ON \
+                (subq.id = pen.edge)',"+str(start)+","+str(end)+") INNER JOIN cost_table ON(edge = lid)")
+
+
 
         # LEFT JOIN (SELECT edge, cost + (cost/"+str(my)+")*LN("+str(delta)+") AS cost FROM temp_table1) AS pen ON (subq.id = pen.edge)',"+start+","+end+")INNER JOIN model_graph.model_graph ON(edge = lid)")
 
@@ -118,8 +117,7 @@ def routeSetGeneration(start, end):
         temp_q = db.exec_("SELECT * FROM temp_table2 ORDER BY path_seq")
         queries.append(temp_q)
 
-        cost_q = db.exec_(
-            "SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
+        cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
 
@@ -134,6 +132,8 @@ def routeSetGeneration(start, end):
             db.exec_("SELECT * INTO temp_table1 from temp_table2")
             i = i + 1
             nr_routes = nr_routes + 1
+
+    db.exec_("INSERT INTO all_results SELECT * FROM result_table")
     return nr_routes
 
 
@@ -178,18 +178,42 @@ if db.isValid():
         err = db.lastError()
         print(err.driverText())
 
-    start_zone = 7137
+    # start_zone = 7137
     # start_zone = 7066
-    end_zone = 7320
+    # end_zone = 7320
     # end_zone = 7748
 
-    node = genStartNode(start_zone, end_zone)
+    # Start generating several route sets
+    # List of OD-pairs
+    # start_list = [7137, 7162, 7557, 6901, 6872]
+    # end_list = [7320, 6836, 6968, 7934, 7985]
+    start_list = [7137, 7162]
+    end_list = [7320, 6836]
 
-    start = str(node[0])
-    end = str(node[1])
+    nr_routes = []
+    db.exec_("DROP TABLE if exists all_results")
+    db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+	node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+	link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+    end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+    speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
-    nr_routes = routeSetGeneration(start, end)
+    for x in range(len(start_list)):
 
-    printRoutes(nr_routes)
+        node = genStartNode(start_list[x], end_list[x])
+        print("nr: " + str(x) + "start node:" + str(node[0])+" end node:"+str(node[1]) + "start zone:"+str(start_list[x])+ " end zone:"+str(end_list[x]))
+
+        nr_routes = routeSetGeneration(node[0], node[1], start_list[x], end_list[x])
+
+    # End of generating more route sets
+
+    # node = genStartNode(start_zone, end_zone)
+    #
+    # start = str(node[0])
+    # end = str(node[1])
+    #
+    # nr_routes = routeSetGeneration(start, end)
+    #
+    # printRoutes(nr_routes)
 
 toc();
