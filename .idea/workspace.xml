@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="f3e4e305-88bf-4e34-876b-989486353cab" name="Default Changelist" comment="c">
-      <change beforePath="$PROJECT_DIR$/Mattias/mattias_route_set.py" beforeDir="false" afterPath="$PROJECT_DIR$/Mattias/mattias_route_set.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Gemensam kod/analysing_result_table.py" beforeDir="false" afterPath="$PROJECT_DIR$/Gemensam kod/analysing_result_table.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Gemensam kod/route_set_generation.py" beforeDir="false" afterPath="$PROJECT_DIR$/Gemensam kod/route_set_generation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Gustavs/exjobb.qgz" beforeDir="false" afterPath="$PROJECT_DIR$/Gustavs/exjobb.qgz" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Todo" beforeDir="false" afterPath="$PROJECT_DIR$/Todo" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -53,7 +56,9 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
           </value>
         </entry>
       </map>
