@@ -68,17 +68,27 @@ def odEffect(start, end, lid):
     end_zone = end
     removed_lid = lid
 
+
     #Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
                       " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                                                                                        " did NOT IN (select did from all_results where lid = "+str(removed_lid)+")")
+                    " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  lid = "+str(removed_lid)+")")
     query1.next()
     id_alt = str(query1.value(0))
     print("id_alt är: "+ id_alt)
 
     if id_alt== "NULL":
-        #There is no routes with start and end zone
-        return 1000;
+        #Either there's only one route in the route set or the route set is empty
+
+        query = db.exec_("SELECT MIN(did) FROM all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+"")
+        query.next()
+
+        if query.value(0) :
+            #There is no route that is not affected
+            return 99999
+        else:
+            #There is no routes with that start and end zone
+            return 1000;
 
     elif  id_alt == "1":
         #print("Zon påverkas inte")
@@ -86,39 +96,34 @@ def odEffect(start, end, lid):
     else:
         #print("Zon påverkas och bästa id är:" + id_alt)
 
-        # Fetching cost of the optimal route
+        # Fetching cost of the optimal route and the alternative
         query2 = db.exec_("SELECT sum(link_cost) from all_results where "
-                          " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                                                                                            "did = 1 OR did = "+str(id_alt)+" group by did")
+                          " (start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+") AND "
+                                        "(did = 1 OR did = "+str(id_alt)+") group by did")
         query2.next()
+        # Best cost
         cost_opt = str(query2.value(0))
-        #print("Cost of optimal route: " + cost_opt)
 
         # Alternative cost
         query2.next()
         cost_alt = str(query2.value(0))
-        #print("Cost of alternative route: " + cost_alt)
 
         # Proportion of extra cost of alternative route in relation to opt route
-        return (float(cost_alt)/float(cost_opt)-1)
+        # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
+        return (float(cost_alt)/float(cost_opt))
 
 
 
 start_zone = 7137
 end_zone = 7320
 
-#Trean bäst
-#removed_lid = 80669
-# Tvåan näst bäst
-# removed_lid = 83896
-# best påverkas ej
-#removed_lid = 81118
 
-removed_lid = 93383
+removed_lid = 83025 #Götgatan
+# removed_lid = 84245
 
 #List of OD-pairs
-start_list = [ 7137, 7162 ,7557, 6901, 6872]
-end_list = [7320, 6836, 6968, 7934, 7985]
+start_list = [6904, 6884, 6869, 6887, 6954]
+end_list = [7662, 7878, 7642, 7630, 7878]
 
 i=0
 while i < len(start_list):
