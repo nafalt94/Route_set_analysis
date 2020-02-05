@@ -5,4 +5,4 @@
  
    - Kalla på startnod i ruttgenereringen ist för som egen funktion.
    
-   - I "analysing_route_set: undersöka s.a. t.ex. om både rutt 1 och rutt 2 påverkas, då ska den alternativa rutten vara den tredje. Jag har bara sett att det funkar för 2a rutten.
+  
