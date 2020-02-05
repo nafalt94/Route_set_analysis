@@ -65,7 +65,11 @@ def genStartNode(start, end):
     return node
 
 
-def routeSetGeneration(start, end, start_zone, end_zone):
+def routeSetGeneration(start_zone, end_zone):
+    node = genStartNode(start_zone, end_zone)
+    start = node[0]
+    end = node[1]
+
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost \
@@ -199,11 +203,7 @@ if db.isValid():
     speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
     for x in range(len(start_list)):
-
-        node = genStartNode(start_list[x], end_list[x])
-        print("nr: " + str(x) + "start node:" + str(node[0])+" end node:"+str(node[1]) + "start zone:"+str(start_list[x])+ " end zone:"+str(end_list[x]))
-
-        nr_routes = routeSetGeneration(node[0], node[1], start_list[x], end_list[x])
+         nr_routes = routeSetGeneration(start_list[x], end_list[x])
 
     # End of generating more route sets
 
