@@ -50,8 +50,8 @@ def genStartNode(start, end):
                     ORDER BY id, distance) AS score, id, lid, start_node, distance \
                     FROM( SELECT emme.id, lid,start_node, ST_distance(geom, emme_centroid) AS \
                     distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
-                    emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start_zone) + " \
-                    OR id = " + str(end_zone) + ") AS emme \
+                    emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start) + " \
+                    OR id = " + str(end) + ") AS emme \
                     WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
                     WHERE score = 1")
     node = []
@@ -185,10 +185,10 @@ if db.isValid():
 
     # Start generating several route sets
     # List of OD-pairs
-    # start_list = [7137, 7162, 7557, 6901, 6872]
-    # end_list = [7320, 6836, 6968, 7934, 7985]
-    start_list = [7137, 7162]
-    end_list = [7320, 6836]
+    start_list = [7137, 7162, 7557, 6901, 6872]
+    end_list = [7320, 6836, 6968, 7934, 7985]
+    # start_list = [7137, 7162]
+    # end_list = [7320, 6836]
 
     nr_routes = []
     db.exec_("DROP TABLE if exists all_results")
