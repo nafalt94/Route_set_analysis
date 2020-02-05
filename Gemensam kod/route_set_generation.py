@@ -213,24 +213,24 @@ if db.isValid():
     #     print("start: "+str(id[int(x)])+"   and end: "+str(id[int(x)+int(len(id)/2)]))
 
     # __________________________________________________________________________________________________________________
-    # Start generating several route sets
+    #Start generating several route sets
 
-    #List of OD-pairs
-    # start_list = [7137, 7162, 7557, 6901, 6872]
-    # end_list = [7320, 6836, 6968, 7934, 7985]
+    # List of OD-pairs
+    start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
+    end_list = [7662, 7878, 7642, 7630, 7878, 6953,7182]
     # start_list = [7137, 7162]
     # end_list = [7320, 6836]
-    #
-    # nr_routes = []
-    # db.exec_("DROP TABLE if exists all_results")
-    # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-	# node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-	# link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-    # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-    # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-    #
-    # for x in range(len(start_list)):
-    #     nr_routes = routeSetGeneration(start_list[x], end_list[x] )
+
+    nr_routes = []
+    db.exec_("DROP TABLE if exists all_results")
+    db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+	node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+	link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+    end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+    speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+    for x in range(len(start_list)):
+        nr_routes = routeSetGeneration(start_list[x], end_list[x] )
 
     #___________________________________________________________________________________________________________________
 
@@ -238,11 +238,11 @@ if db.isValid():
 
     # start_zone = 6785
     # end_zone = 7405
-    start_zone = 7154
-    end_zone = 7255
-
-    nr_routes = routeSetGeneration(start_zone, end_zone)
-    printRoutes(nr_routes)
+    # start_zone = 7154
+    # end_zone = 7255
+    #
+    # nr_routes = routeSetGeneration(start_zone, end_zone)
+    # printRoutes(nr_routes)
 
 
     #___________________________________________________________________________________________________________________

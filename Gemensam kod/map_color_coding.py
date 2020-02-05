@@ -1,28 +1,18 @@
-nr_routes = 1
+#Remove old layers
+removeRoutesLayers()
 
-sqlcall = "(SELECT * FROM emme_zones)"
+sqlcall = "(SELECT * FROM emme_results)"
 uri.setDataSource("", sqlcall, "geom", "", "id")
 layer = QgsVectorLayer(uri.uri(), "test " , "postgres")
 QgsProject.instance().addMapLayer(layer)
 
-#renderer = layer.renderer()
-#print("Type:", renderer.type())
-#
-#layer.renderer().symbol().symbolLayer(0).setColor(QColor.fromRgb(0, 225, 0))
-#
-## update legend for layer
-#qgis.utils.iface.layerTreeView().refreshLayerSymbology(layer.id())
-#
-#print(layer.renderer().symbol().symbolLayers()[0].properties())
-#
-#symbols = layer.renderer().symbol()
 
-
-#####################################
 values = (
-    ('Low', 6772, 7520, QColor.fromRgb(0, 225, 0)),
-    ('Medium', 7520, 7620, 'yellow'),
-    ('Large', 7620, 240000, 'orange'),
+    ('Zon påverkas ej', -3, -3, QColor.fromRgb(0, 0, 200)),
+    ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
+    ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
+    ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
+    ('Improves', 0, 1000, QColor.fromRgb(102, 255, 102)),
 )
 
 # create a category for each item in values
@@ -34,7 +24,6 @@ for label, lower, upper, color in values:
     ranges.append(rng)
     
 ## create the renderer and assign it to a layer
-expression = 'id' # field name
+expression = 'alt_route_cost' # field name
 layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 #iface.mapCanvas().refresh() 
-#################################################

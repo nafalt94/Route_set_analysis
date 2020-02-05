@@ -85,14 +85,14 @@ def odEffect(start, end, lid):
 
         if query.value(0) :
             #There is no route that is not affected
-            return 99999
+            return -1
         else:
             #There is no routes with that start and end zone
-            return 1000;
+            return -2;
 
     elif  id_alt == "1":
         #print("Zon påverkas inte")
-        return 0
+        return -3
     else:
         #print("Zon påverkas och bästa id är:" + id_alt)
 
@@ -122,14 +122,20 @@ removed_lid = 83025 #Götgatan
 # removed_lid = 84245
 
 #List of OD-pairs
-start_list = [6904, 6884, 6869, 6887, 6954]
-end_list = [7662, 7878, 7642, 7630, 7878]
+start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
+end_list = [7662, 7878, 7642, 7630, 7878, 6953, 7182]
+
+# Create emme_result table
+db.exec_("DROP table emme_results")
+db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
 
 i=0
 while i < len(start_list):
     result_test = odEffect(start_list[i], end_list[i], removed_lid)
     print("Result of "+str(i)+ " is: " + str(result_test))
-    i = i+1
+    db.exec_("UPDATE emme_results SET alt_route_cost = "+str(result_test)+" WHERE id = '"+str(start_list[i])+"'"
+                                            " OR id = '"+str(end_list[i])+"';")
+    i = i + 1
 
 
 # result_test = odEffect(start_zone, end_zone,removed_lid)
