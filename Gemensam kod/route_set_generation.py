@@ -41,7 +41,7 @@ def removeRoutesLayers():
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
-                and str(layer.name()) != "OpenStreetMap":
+                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results":
             QgsProject.instance().removeMapLayer(layer.id())
 
 
@@ -61,7 +61,8 @@ def genStartNode(start, end):
         counter += 1
         node.append(query1.value(0))
     if counter != 2:
-        raise Exception('No start or end node in Zones')
+        raise Exception('No start or end node in Zones and startnode is:' +str(start)+
+                        ' and endnode is:'+ str(end))
     return node
 
 
@@ -85,7 +86,7 @@ def routeSetGeneration(start_zone, end_zone):
     db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
 
     # Getting the agg. cost for best route
-    cost_q = db.exec_("SELECT agg_cost FROM temp_table1 ORDER BY agg_cost DESC")
+    cost_q = db.exec_("SELECT sum(link_cost) FROM temp_table1")
 
     cost_q.next()
     route1_cost = cost_q.value(0)

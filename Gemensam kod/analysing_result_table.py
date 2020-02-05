@@ -69,9 +69,9 @@ def odEffect(start, end, lid):
     removed_lid = lid
 
     #Finding best, non-affected alternative route
-    query1 = db.exec_("SELECT MIN(did) FROM result_table WHERE"
+    query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
                       " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                                                                                        " did NOT IN (select did from result_table where lid = "+str(removed_lid)+")")
+                                                                                        " did NOT IN (select did from all_results where lid = "+str(removed_lid)+")")
     query1.next()
     id_alt = str(query1.value(0))
     print("id_alt är: "+ id_alt)
@@ -87,7 +87,7 @@ def odEffect(start, end, lid):
         #print("Zon påverkas och bästa id är:" + id_alt)
 
         # Fetching cost of the optimal route
-        query2 = db.exec_("SELECT sum(link_cost) from result_table where "
+        query2 = db.exec_("SELECT sum(link_cost) from all_results where "
                           " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
                                                                                             "did = 1 OR did = "+str(id_alt)+" group by did")
         query2.next()
@@ -110,9 +110,11 @@ end_zone = 7320
 #Trean bäst
 #removed_lid = 80669
 # Tvåan näst bäst
-removed_lid = 83896
+# removed_lid = 83896
 # best påverkas ej
 #removed_lid = 81118
+
+removed_lid = 93383
 
 #List of OD-pairs
 start_list = [ 7137, 7162 ,7557, 6901, 6872]
