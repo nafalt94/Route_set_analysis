@@ -8,7 +8,7 @@ QgsProject.instance().addMapLayer(layer)
 
 
 values = (
-    ('Zon påverkas ej', -3, -3, QColor.fromRgb(0, 0, 200)),
+    ('Not affected', -3, -3, QColor.fromRgb(0, 0, 200)),
     ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
     ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
     ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),

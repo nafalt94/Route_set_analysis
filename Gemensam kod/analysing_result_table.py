@@ -113,6 +113,18 @@ def odEffect(start, end, lid):
         return (float(cost_alt)/float(cost_opt))
 
 
+def odLinkLayer(start_list, end_list):
+
+
+    db.exec_("DROP table if exists OD_lines")
+    db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into OD_lines FROM emme_zones"
+             " where id = "+str(start_list[0])+" OR id = "+ str(end_list[0]) +" ")
+    i = 1
+    while i < len(start_list):
+        db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
+                 "AS geom FROM emme_zones where id = "+str(start_list[i])+" OR id = "+str(end_list[i])+"")
+        i = i + 1
+
 
 start_zone = 7137
 end_zone = 7320
@@ -126,8 +138,9 @@ start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
 end_list = [7662, 7878, 7642, 7630, 7878, 6953, 7182]
 
 # Create emme_result table
-db.exec_("DROP table emme_results")
+db.exec_("DROP table if exists emme_results")
 db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
+
 
 i=0
 while i < len(start_list):
@@ -137,9 +150,7 @@ while i < len(start_list):
                                             " OR id = '"+str(end_list[i])+"';")
     i = i + 1
 
-
-# result_test = odEffect(start_zone, end_zone,removed_lid)
-# print("Result is: " + str(result_test))
+odLinkLayer(start_list, end_list)
 
 toc();
 
