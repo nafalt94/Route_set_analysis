@@ -1,2 +1,17 @@
-SELECT * FROM pgr_bdDijkstra('SELECT id AS id, start_node AS source, end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost FROM model_graph',42887,
-										  ARRAY[42897,42901,42902])
+SELECT * FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, 
+end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost 
+FROM model_graph',43912, 
+ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='43912' LIMIT 50 )) 
+INNER JOIN cost_table ON(edge = lid) 
+				
+				
+				
+SELECT * INTO dijk_test FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, 
+end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost 
+FROM model_graph',43912, 
+ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='43912' LIMIT 50 )) 
+INNER JOIN cost_table ON(edge = lid) 
+										 
+
+
+
