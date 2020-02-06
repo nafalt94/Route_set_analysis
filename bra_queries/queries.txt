@@ -5,3 +5,12 @@ select ST_Length(geom)/speed AS link_cost, * into cost_table from model_graph
 drop table if exists point_table
 select (ST_DumpPoints(l.geom)).geom into point_table from all_results as l where did = 1
 select * from point_table
+
+#Skapa linjer mellan alla OD-par
+SELECT 
+    a.id, 
+    b.id,
+    ST_MakeLine(a.geom, b.geom) 
+  FROM points a, points b
+ WHERE a.id < b.id;
+
