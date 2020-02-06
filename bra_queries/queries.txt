@@ -10,7 +10,7 @@ select * from point_table
 SELECT 
     a.id, 
     b.id,
-    ST_MakeLine(a.geom, b.geom) 
-  FROM points a, points b
+    ST_MakeLine(ST_Centroid(a.geom), ST_Centroid(b.geom) )
+ FROM emme_zones a, emme_zones b
  WHERE a.id < b.id;
 
