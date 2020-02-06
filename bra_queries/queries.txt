@@ -1,2 +1,28 @@
 #Skapa cost_table
 select ST_Length(geom)/speed AS link_cost, * into cost_table from model_graph
+
+#SKapa heatmap
+drop table if exists point_table
+select (ST_DumpPoints(l.geom)).geom into point_table from all_results as l where did = 1
+select * from point_table
+
+#Skapa linjer mellan alla OD-par
+SELECT 
+    a.id, 
+    b.id,
+    ST_MakeLine(ST_Centroid(a.geom), ST_Centroid(b.geom) )
+ FROM emme_zones a, emme_zones b
+ WHERE a.id < b.id;
+ 
+ # För att plocka ut "representativa" (eller inte) rutter från klustringstabell
+ WITH summary AS (
+    SELECT p.id, 
+           p.geom, 
+           p.cluster_id, 
+           ROW_NUMBER() OVER(PARTITION BY p.cluster_id) 
+		AS rk
+      FROM od_cluster p)
+SELECT s.*
+  FROM summary s
+ WHERE s.rk = 1
+
