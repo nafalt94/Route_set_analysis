@@ -1,2 +1,6 @@
 #Skapa cost_table
 select ST_Length(geom)/speed AS link_cost, * into cost_table from model_graph
+
+#Skapa heatmap
+select (ST_DumpPoints(l.geom)).geom into point_table from all_results as l
+select * from point_table
