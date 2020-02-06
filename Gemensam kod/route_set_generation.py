@@ -41,7 +41,7 @@ def removeRoutesLayers():
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
-                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results":
+                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider":
             QgsProject.instance().removeMapLayer(layer.id())
 
 

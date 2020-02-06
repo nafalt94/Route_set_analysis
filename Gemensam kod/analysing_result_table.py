@@ -112,10 +112,8 @@ def odEffect(start, end, lid):
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return (float(cost_alt)/float(cost_opt))
 
-
+#odLinkLayer creates a table named OD_lines including vectors between the OD-pairs in star_list and end_list
 def odLinkLayer(start_list, end_list):
-
-
     db.exec_("DROP table if exists OD_lines")
     db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into OD_lines FROM emme_zones"
              " where id = "+str(start_list[0])+" OR id = "+ str(end_list[0]) +" ")

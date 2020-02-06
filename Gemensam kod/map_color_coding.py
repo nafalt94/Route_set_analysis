@@ -12,7 +12,7 @@ values = (
     ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
     ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
     ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-    ('Improves', 0, 1000, QColor.fromRgb(102, 255, 102)),
+    ('Alternative route exists', 0, 1000, QColor.fromRgb(102, 255, 102)),
 )
 
 # create a category for each item in values
