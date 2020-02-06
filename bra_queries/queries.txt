@@ -13,4 +13,16 @@ SELECT
     ST_MakeLine(ST_Centroid(a.geom), ST_Centroid(b.geom) )
  FROM emme_zones a, emme_zones b
  WHERE a.id < b.id;
+ 
+ # För att plocka ut "representativa" (eller inte) rutter från klustringstabell
+ WITH summary AS (
+    SELECT p.id, 
+           p.geom, 
+           p.cluster_id, 
+           ROW_NUMBER() OVER(PARTITION BY p.cluster_id) 
+		AS rk
+      FROM od_cluster p)
+SELECT s.*
+  FROM summary s
+ WHERE s.rk = 1
 
