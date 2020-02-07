@@ -6,11 +6,13 @@ drop table if exists point_table
 select (ST_DumpPoints(l.geom)).geom into point_table from all_results as l where did = 1
 select * from point_table
 
-#Skapa linjer mellan alla OD-par
+#Skapa tabell mellan alla OD-par
 SELECT 
-    a.id, 
-    b.id,
-    ST_MakeLine(ST_Centroid(a.geom), ST_Centroid(b.geom) )
+    a.id as id_ori, 
+    b.id as id_dest,
+    ST_MakeLine(ST_Centroid(a.geom), ST_Centroid(b.geom)) as geom_line,
+	ST_Centroid(a.geom) as geom_ori,
+	ST_Centroid(b.geom) as geom_dest
  FROM emme_zones a, emme_zones b
  WHERE a.id < b.id;
  
