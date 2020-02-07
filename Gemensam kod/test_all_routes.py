@@ -60,11 +60,11 @@ def genStartNode(start, end):
     node = []
     counter1 = 0
     counter2 = 0
-    print("Start: " + str(start) + " end: " + str(end))
+    #print("Start: " + str(start) + " end: " + str(end))
     # Saving SQL answer into matrix
     while query1.next():
         counter1 += 1
-        print("start node is :" + str(query1.value(0)))
+        #print("start node is :" + str(query1.value(0)))
         node.append(query1.value(0))
 
     if counter1 != 1:
@@ -73,7 +73,7 @@ def genStartNode(start, end):
 
     while query2.next():
         counter2 += 1
-        print("start node is :" + str(query2.value(0)))
+        #print("start node is :" + str(query2.value(0)))
         node.append(query2.value(0))
 
     if counter2 != 1:
@@ -96,7 +96,7 @@ def genonenode(zone):
     # Saving SQL answer into matrix
     while query1.next():
         counter1 += 1
-        print("node is :" + str(query1.value(0)))
+       # print("node is :" + str(query1.value(0)))
         node = query1.value(0)
 
     if counter1 != 1:
@@ -121,7 +121,8 @@ def routeSetGeneration(start_zone, end_zone):
 
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
-    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
+    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did, \
+    * INTO result_table FROM temp_table1")
 
     # Getting the agg. cost for best route
     cost_q = db.exec_("SELECT sum(link_cost) FROM temp_table1")
@@ -215,6 +216,28 @@ def onetoMany(one_node, many_nodes_list):
     FROM model_graph',"+str(one_node)+", ARRAY["+array_string+"] ) \
     INNER JOIN cost_table ON(edge = lid) ")
 
+def onetoManyPenalty(one_node, many_nodes_list):
+    print("One to many with penalty")
+    array_string = ""
+    for i in many_nodes_list:
+        if i != many_nodes_list[len(many_nodes_list) - 1]:
+            array_string = array_string + " " + str(i) + ","
+        else:
+            array_string = array_string + " " + str(i)
+    print(array_string)
+
+    db.exec_("DROP TABLE if exists dijk_temp_table1")
+    # Calculate shorest routes
+    db.exec_("SELECT * INTO dijk_temp_table1 FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
+        end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
+        FROM model_graph'," + str(one_node) + ", ARRAY[" + array_string + "] ) \
+        INNER JOIN cost_table ON(edge = lid) ")
+
+    db.exec_("DROP TABLE if exists dijk_result_table")
+    db.exec_("SELECT 1 AS did,* INTO \
+        dijk_result_table FROM dijk_temp_table1")
+
+
 
 def alltoAll(limit):
     print("all to all")
@@ -233,6 +256,7 @@ def alltoAll(limit):
         FROM model_graph',"+str(x)+", \
         ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='"+str(x)+"')) \
         INNER JOIN cost_table ON(edge = lid) ")
+
 # End of Function definitions
 
 TicToc = TicTocGenerator()
@@ -292,7 +316,8 @@ if db.isValid():
     #manyToMany(limit)
     print("the node list: "+str(many_nodes_list))
     print("start node :"+str(one_node))
-    onetoMany(one_node, many_nodes_list)
+    #onetoMany(one_node, many_nodes_list)
+    onetoManyPenalty(one_node, many_nodes_list)
 
 
 

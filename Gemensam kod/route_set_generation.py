@@ -83,14 +83,19 @@ def genStartNode(start, end):
 
 
 def routeSetGeneration(start_zone, end_zone):
+    #
+    db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
+    from model_graph)")
+
     node = genStartNode(start_zone, end_zone)
     start = node[0]
     end = node[1]
     #print("Start zone is: "+str(start_zone)+" End zone is: "+str(end_zone))
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
-    db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost \
-            ,3*link_cost AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
+    db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
+     link_cost AS cost, 3*link_cost AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
+     INNER JOIN cost_table ON(edge = lid)")
 
     # Saving route 1 in query
     temp_q = db.exec_("SELECT * FROM temp_table1 ORDER BY path_seq")
@@ -99,7 +104,8 @@ def routeSetGeneration(start_zone, end_zone):
 
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
-    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO result_table FROM temp_table1")
+    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
+    result_table FROM temp_table1")
 
     # Getting the agg. cost for best route
     cost_q = db.exec_("SELECT sum(link_cost) FROM temp_table1")
@@ -132,7 +138,7 @@ def routeSetGeneration(start_zone, end_zone):
 
         # Route 2
         db.exec_("DROP TABLE if exists temp_table2")
-        db.exec_("SELECT * INTO temp_table2 from pgr_dijkstra('SELECT id, source, target, \
+        db.exec_("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
         CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
         FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 100000000 AS reverse_cost \
         FROM cost_table) AS subq LEFT JOIN \
@@ -143,7 +149,8 @@ def routeSetGeneration(start_zone, end_zone):
         # Saving route cost without penalty.
         temp_q = db.exec_("SELECT * FROM temp_table2 ORDER BY path_seq")
         queries.append(temp_q)
-        cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
+        cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
+        INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         #print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
         route_stop = cost_q.value(0)

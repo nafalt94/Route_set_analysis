@@ -16,7 +16,7 @@ SELECT
  FROM emme_zones a, emme_zones b
  WHERE a.id < b.id;
  
- # För att plocka ut "representativa" (eller inte) rutter från klustringstabell
+ # För att plocka ut "representativa" (eller inte) rutter från klustringstabell (QGIS)
  WITH summary AS (
     SELECT p.id, 
            p.geom, 
@@ -28,3 +28,18 @@ SELECT s.*
   FROM summary s
  WHERE s.rk = 1
 
+#För att göra om geom (text) till geometri
+ALTER TABLE cluster_result ALTER COLUMN geom TYPE Geometry USING geom::Geometry;
+
+ # För att plocka ut "representativa" (eller inte) rutter från klustringstabell (R)
+WITH summary AS (
+    SELECT p.id_ori,
+			p.id_dest,
+           p.geom, 
+           p.result$cluster, 
+           ROW_NUMBER() OVER(PARTITION BY p.result$cluster) 
+		AS rk
+      FROM cluster_result p)
+SELECT s.*
+  FROM summary s
+ WHERE s.rk = 1
