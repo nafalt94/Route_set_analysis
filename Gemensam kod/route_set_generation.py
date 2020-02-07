@@ -46,23 +46,39 @@ def removeRoutesLayers():
 
 
 def genStartNode(start, end):
-    query1 = db.exec_("SELECT start_node FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
-                    ORDER BY id, distance) AS score, id, lid, start_node, distance \
-                    FROM( SELECT emme.id, lid,start_node, ST_distance(geom, emme_centroid) AS \
-                    distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
-                    emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start) + " \
-                    OR id = " + str(end) + ") AS emme \
-                    WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
-                    WHERE score = 1")
+    # Create table with zone ids from emme_zones connected to start_nodes in model_graph
+    db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+        ORDER BY id, distance) AS score, id, lid, start_node, distance \
+        FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
+        distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+        emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
+        WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+        WHERE score = 1)")
+
+    query1 = db.exec_("SELECT start_node FROM od_lid WHERE id="+str(start))
+    query2 = db.exec_("SELECT start_node FROM od_lid WHERE id="+str(end))
     node = []
-    counter = 0;
+    counter1 = 0
+    counter2 = 0
+    print("Start: "+str(start)+" end: "+str(end))
     # Saving SQL answer into matrix
     while query1.next():
-        counter += 1
+        counter1 += 1
+        print("start node is :"+str(query1.value(0)))
         node.append(query1.value(0))
-    if counter != 2:
-        raise Exception('No start or end node in Zones and startnode is:' +str(start)+
+
+    if counter1 != 1:
+        raise Exception('No start node in Zones and startnode is:' +str(start)+
                         ' and endnode is:'+ str(end))
+
+    while query2.next():
+        counter2 += 1
+        print("start node is :" + str(query2.value(0)))
+        node.append(query2.value(0))
+
+    if counter2 != 1:
+        raise Exception('No end node in Zones and startnode is:' + str(start) +
+                        ' and endnode is:' + str(end))
     return node
 
 
@@ -70,7 +86,7 @@ def routeSetGeneration(start_zone, end_zone):
     node = genStartNode(start_zone, end_zone)
     start = node[0]
     end = node[1]
-    print("Start zone is: "+str(start_zone)+" End zone is: "+str(end_zone))
+    #print("Start zone is: "+str(start_zone)+" End zone is: "+str(end_zone))
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost \
@@ -90,12 +106,12 @@ def routeSetGeneration(start_zone, end_zone):
 
     cost_q.next()
     route1_cost = cost_q.value(0)
-    print("Current cost route 1: " + str(route1_cost))
+    #print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
     pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
     pen_q.next()
-    print("Pencost för rutt: "+str(pen_q.value(0)))
+    #print("Pencost för rutt: "+str(pen_q.value(0)))
     pen_stop = pen_q.value(0)
 
     ## Calculationg alternative routes
@@ -129,14 +145,14 @@ def routeSetGeneration(start_zone, end_zone):
         queries.append(temp_q)
         cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
-        print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+        #print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
         route_stop = cost_q.value(0)
-        print("difference is = " + str(route_stop / route1_cost))
+        #print("difference is = " + str(route_stop / route1_cost))
 
         # Saving route cost with penalty.
         pen_q = db.exec_("SELECT SUM(cost) from temp_table2")
         pen_q.next()
-        print("Pencost för rutt: "+str(pen_q.value(0)))
+        #print("Pencost för rutt: "+str(pen_q.value(0)))
         pen_stop = pen_q.value(0)
 
         if comp(route_stop, route1_cost, threshold):
@@ -158,7 +174,7 @@ def printRoutes(nr_routes):
     while i <= nr_routes:
         sqlcall = "(SELECT * FROM result_table WHERE did=" + str(i) + ")"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
-        layert = QgsVectorLayer(uri.uri(), "route " + str(i), "postgres")
+        layert = QgsVectorLayer(uri.uri()," route " + str(i), "postgres")
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
@@ -216,8 +232,9 @@ if db.isValid():
     #Start generating several route sets
 
     # List of OD-pairs
-    start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
-    end_list = [7662, 7878, 7642, 7630, 7878, 6953,7182]
+    #start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
+    start_list = [7954, 7954, 7954, 7954]
+    end_list = [7990, 7949, 6913, 6950]
     # start_list = [7137, 7162]
     # end_list = [7320, 6836]
 
@@ -229,8 +246,12 @@ if db.isValid():
     end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
     speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
-    for x in range(len(start_list)):
-        nr_routes = routeSetGeneration(start_list[x], end_list[x] )
+    for x in range(len(end_list)):
+        print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
+
+        nr_routes.append(routeSetGeneration(start_list[x], end_list[x]))
+
+   
 
     #___________________________________________________________________________________________________________________
 

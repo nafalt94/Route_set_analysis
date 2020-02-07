@@ -46,25 +46,63 @@ def removeRoutesLayers():
 
 
 def genStartNode(start, end):
-    query1 = db.exec_("SELECT start_node FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
-                    ORDER BY id, distance) AS score, id, lid, start_node, distance \
-                    FROM( SELECT emme.id, lid,start_node, ST_distance(geom, emme_centroid) AS \
-                    distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
-                    emme_centroid, geom AS emme_geom FROM emme_zones WHERE id = " + str(start) + " \
-                    OR id = " + str(end) + ") AS emme \
-                    WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
-                    WHERE score = 1")
+    # Create table with zone ids from emme_zones connected to start_nodes in model_graph
+    db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+            ORDER BY id, distance) AS score, id, lid, start_node, distance \
+            FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
+            distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+            emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
+            WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+            WHERE score = 1)")
+
+    query1 = db.exec_("SELECT start_node FROM od_lid WHERE id=" + str(start))
+    query2 = db.exec_("SELECT start_node FROM od_lid WHERE id=" + str(end))
     node = []
-    counter = 0;
+    counter1 = 0
+    counter2 = 0
+    print("Start: " + str(start) + " end: " + str(end))
     # Saving SQL answer into matrix
     while query1.next():
-        counter += 1
+        counter1 += 1
+        print("start node is :" + str(query1.value(0)))
         node.append(query1.value(0))
-    if counter != 2:
-        raise Exception('No start or end node in Zones and startnode is:' +str(start)+
-                        ' and endnode is:'+ str(end))
+
+    if counter1 != 1:
+        raise Exception('No start node in Zones and startnode is:' + str(start) +
+                        ' and endnode is:' + str(end))
+
+    while query2.next():
+        counter2 += 1
+        print("start node is :" + str(query2.value(0)))
+        node.append(query2.value(0))
+
+    if counter2 != 1:
+        raise Exception('No end node in Zones and startnode is:' + str(start) +
+                        ' and endnode is:' + str(end))
     return node
 
+def genonenode(zone):
+    db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+                ORDER BY id, distance) AS score, id, lid, start_node, distance \
+                FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
+                distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+                emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
+                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+                WHERE score = 1)")
+
+    query1 = db.exec_("SELECT start_node FROM od_lid WHERE id=" + str(zone))
+    counter1 = 0
+
+    # Saving SQL answer into matrix
+    while query1.next():
+        counter1 += 1
+        print("node is :" + str(query1.value(0)))
+        node = query1.value(0)
+
+    if counter1 != 1:
+        raise Exception('No  node in Zones and startnode is:' + str(zone))
+
+    return node
 
 def routeSetGeneration(start_zone, end_zone):
     node = genStartNode(start_zone, end_zone)
@@ -162,7 +200,39 @@ def printRoutes(nr_routes):
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
+def onetoMany(one_node, many_nodes_list):
+    print("one to many")
+    # build string with many_nodes_list
+    array_string = ""
+    for i in many_nodes_list:
+        if i != many_nodes_list[len(many_nodes_list)-1]:
+            array_string = array_string + " " + str(i) + ","
+        else:
+            array_string = array_string + " " + str(i)
+    print(array_string)
+    db.exec_("INSERT INTO dijk_test SELECT * FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
+    end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
+    FROM model_graph',"+str(one_node)+", ARRAY["+array_string+"] ) \
+    INNER JOIN cost_table ON(edge = lid) ")
 
+
+def alltoAll(limit):
+    print("all to all")
+    all_nodes_list = []
+
+    # OBSERVE THE LIMIT remove if all vs all wants to be examined
+    all_nodes = db.exec_("SELECT start_node FROM od_lid ORDER BY random() LIMIT "+str(limit))
+    i = 0
+    while all_nodes.next():
+        all_nodes_list.append(all_nodes.value(0))
+        i = i + 1
+
+    for x in all_nodes_list:
+        db.exec_("INSERT INTO dijk_test SELECT * FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
+        end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
+        FROM model_graph',"+str(x)+", \
+        ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='"+str(x)+"')) \
+        INNER JOIN cost_table ON(edge = lid) ")
 # End of Function definitions
 
 TicToc = TicTocGenerator()
@@ -195,31 +265,36 @@ if db.isValid():
         print(err.driverText())
     #___________________________________________________________________________________________________________________
 
+    # Observe these are dummies only used to generate dijk_test because om lazy
     start_node_test = 43912
     end_node_test = 43838
-    all_nodes_list = []
-    all_nodes = db.exec_("SELECT start_node FROM od_lid ORDER BY random() LIMIT 100" )
-    i = 0
-    while all_nodes.next():
-        all_nodes_list.append(all_nodes.value(0))
 
-        #print(str(all_nodes_list[i]))
-        i = i + 1
+    one_zone = 7954
+    many_zones_list = [7990, 7949, 6913, 6950]
+    many_nodes_list =[]
+    one_node = genonenode(one_zone)
 
-    print("Klar med listan! som innehåller : "+str(i)+" zoner")
+    for x in many_zones_list:
+        many_nodes_list.append(genonenode(x))
+
+
+    # How many vs how many in manyToMany generation.
+    limit = 10;
+
     db.exec_("DROP TABLE if exists dijk_test")
     db.exec_("SELECT * INTO dijk_test FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
          end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
          FROM model_graph'," + str(start_node_test) + ", \
          ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='" + str(end_node_test) + "')) \
          INNER JOIN cost_table ON(edge = lid) ")
-    db.exec_("DELETE * FROM dijk_test")
+    db.exec_("DELETE FROM dijk_test")
 
-    for x in all_nodes_list:
-        db.exec_("INSERT INTO dijk_test SELECT * FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
-        end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
-        FROM model_graph',"+str(x)+", \
-        ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='"+str(x)+"')) \
-        INNER JOIN cost_table ON(edge = lid) ")
+    #manyToMany(limit)
+    print("the node list: "+str(many_nodes_list))
+    print("start node :"+str(one_node))
+    onetoMany(one_node, many_nodes_list)
+
+
+
 
 toc();
