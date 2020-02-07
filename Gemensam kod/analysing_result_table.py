@@ -36,7 +36,8 @@ tic()
 ## Connect to the database
 ##################################
 uri = QgsDataSourceUri()
-# set host name, port, database name, username and password
+# set host name, port, database name, username  db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into OD_lines FROM emme_zones"
+#              " where id = "+str(start_list[0])+" OR id = "+ str(end_list[0]) +" ") and password
 uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
 # set database schema, table name, geometry column and optionally
 # subset (WHERE clause)
@@ -115,8 +116,7 @@ def odEffect(start, end, lid):
 #odLinkLayer creates a table named OD_lines including vectors between the OD-pairs in star_list and end_list
 def odLinkLayer(start_list, end_list):
     db.exec_("DROP table if exists OD_lines")
-    db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into OD_lines FROM emme_zones"
-             " where id = "+str(start_list[0])+" OR id = "+ str(end_list[0]) +" ")
+
     i = 1
     while i < len(start_list):
         db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
