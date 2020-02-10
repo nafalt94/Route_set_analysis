@@ -3,7 +3,7 @@ removeRoutesLayers()
 
 sqlcall = "(SELECT * FROM emme_results)"
 uri.setDataSource("", sqlcall, "geom", "", "id")
-layer = QgsVectorLayer(uri.uri(), "test " , "postgres")
+layer = QgsVectorLayer(uri.uri(), "result_impaiment " , "postgres")
 QgsProject.instance().addMapLayer(layer)
 
 
