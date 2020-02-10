@@ -41,10 +41,10 @@ def print_lines():
     # # iface.mapCanvas().refresh()
 
     sqlcall = "(SELECT * FROM od_lines )"
-    uri.setDataSource("", sqlcall, "geom", "", "geom")
-    layert = QgsVectorLayer(uri.uri(), " test ", "postgres")
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+    layert = QgsVectorLayer(uri.uri(), " OD_pairs ", "postgres")
     QgsProject.instance().addMapLayer(layert)
-
+    print("går in")
 
 
 #Remove old layers

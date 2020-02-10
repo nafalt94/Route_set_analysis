@@ -135,8 +135,8 @@ removed_lid = 83025 #Götgatan
 # removed_lid = 84245
 
 #List of OD-pairs
-start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
-end_list = [7662, 7878, 7642, 7630, 7878, 6953, 7182]
+start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+end_list = [7662, 7878, 7642, 7630, 7878, 6953, 7182,7609]
 
 # Create emme_result table
 db.exec_("DROP table if exists emme_results")
