@@ -125,8 +125,7 @@ def odLinkLayer(start_list, end_list):
                  "AS geom FROM emme_zones where id = "+str(start_list[i])+" OR id = "+str(end_list[i])+"")
         i = i + 1
 
-    print("klar med od_lines")
-
+    db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
 start_zone = 7137
 end_zone = 7320
