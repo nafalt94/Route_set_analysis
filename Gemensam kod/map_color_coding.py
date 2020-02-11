@@ -3,7 +3,7 @@ def print_zones():
 
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
-    layer = QgsVectorLayer(uri.uri(), "result_impaiment " , "postgres")
+    layer = QgsVectorLayer(uri.uri(), "result_impairment " , "postgres")
     QgsProject.instance().addMapLayer(layer)
 
 
