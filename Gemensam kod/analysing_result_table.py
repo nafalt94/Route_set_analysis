@@ -62,7 +62,7 @@ if db.isValid():
             err = db.lastError()
             print (err.driverText())
 
-# od_effect(start zone,end zone,LID of the removed link)
+# od_effect (start zone,end zone,LID of the removed link)
 # Function returns proportion of extra cost of alternative route in relation to opt route
 def odEffect(start, end, lid):
     start_zone = start
@@ -113,45 +113,41 @@ def odEffect(start, end, lid):
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return (float(cost_alt)/float(cost_opt))
 
-#odLinkLayer creates a table named OD_lines including vectors between the OD-pairs in star_list and end_list
-def odLinkLayer(start_list, end_list):
+#create_table creates tables named OD_lines including vectors between the OD-pairs in star_list and end_list
+def create_tables(start_list, end_list,lid):
+    # Create OD_lines table
     db.exec_("DROP table if exists OD_lines")
     db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into od_lines "
              "FROM emme_zones where id = " + str(start_list[0]) + " OR id = " + str(end_list[0]) + "")
 
-    i = 1
+    # Create emme_result table
+    db.exec_("DROP table if exists emme_results")
+    db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
+
+    i = 0
     while i < len(start_list):
-        db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
+        if i > 0:
+            db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
                  "AS geom FROM emme_zones where id = "+str(start_list[i])+" OR id = "+str(end_list[i])+"")
+
+        result_test = odEffect(start_list[i], end_list[i], lid)
+        print("Result of " + str(i) + " is: " + str(result_test))
+        db.exec_(
+            "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(start_list[i]) + "'"
+                                                                                                                    " OR id = '" + str(
+                end_list[i]) + "';")
+
         i = i + 1
 
     db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
-start_zone = 7137
-end_zone = 7320
-
 
 removed_lid = 83025 #Götgatan
-# removed_lid = 84245
-
 #List of OD-pairs
 start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
 end_list = [7662, 7878, 7642, 7630, 7878, 6953, 7182,7609]
 
-# Create emme_result table
-db.exec_("DROP table if exists emme_results")
-db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
-
-
-i=0
-while i < len(start_list):
-    result_test = odEffect(start_list[i], end_list[i], removed_lid)
-    print("Result of "+str(i)+ " is: " + str(result_test))
-    db.exec_("UPDATE emme_results SET alt_route_cost = "+str(result_test)+" WHERE id = '"+str(start_list[i])+"'"
-                                            " OR id = '"+str(end_list[i])+"';")
-    i = i + 1
-
-odLinkLayer(start_list, end_list)
+create_tables(start_list, end_list,removed_lid)
 
 toc();
 

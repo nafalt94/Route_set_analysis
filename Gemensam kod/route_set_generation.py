@@ -200,7 +200,7 @@ print(uri.uri())
 db = QSqlDatabase.addDatabase('QPSQL')
 
 # Variable definitions
-my = 0.5
+my = 1
 threshold = 1.6
 
 if db.isValid():
