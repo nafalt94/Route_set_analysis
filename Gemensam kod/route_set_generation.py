@@ -8,6 +8,7 @@ from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
 print(__name__)
 # Function definitions
+
 def TicTocGenerator():
     # Generator that returns time differences
     ti = 0  # initial time
@@ -29,7 +30,11 @@ def tic():
     # Records a time in TicToc, marks the beginning of a time interval
     toc(False)
 
+# Initialize TicToc function.
+TicToc = TicTocGenerator()
 
+
+# Compare if to var1/var2 < t
 def comp(var1, var2, t):
     if var1 / var2 < t:
         return True
@@ -37,6 +42,7 @@ def comp(var1, var2, t):
         return False
 
 
+# Remove all GIS-layers except those stated in the function.
 def removeRoutesLayers():
     layers = QgsProject.instance().mapLayers()
 
@@ -45,7 +51,7 @@ def removeRoutesLayers():
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider":
             QgsProject.instance().removeMapLayer(layer.id())
 
-
+# Generate start and end node based on zone id.
 def genStartNode(start, end):
     # Create table with zone ids from emme_zones connected to start_nodes in model_graph
     db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
@@ -61,11 +67,11 @@ def genStartNode(start, end):
     node = []
     counter1 = 0
     counter2 = 0
-    print("Start: "+str(start)+" end: "+str(end))
+    #print("Start: "+str(start)+" end: "+str(end))
     # Saving SQL answer into matrix
     while query1.next():
         counter1 += 1
-        print("start node is :"+str(query1.value(0)))
+        #print("start node is :"+str(query1.value(0)))
         node.append(query1.value(0))
 
     if counter1 != 1:
@@ -74,7 +80,7 @@ def genStartNode(start, end):
 
     while query2.next():
         counter2 += 1
-        print("start node is :" + str(query2.value(0)))
+        #print("start node is :" + str(query2.value(0)))
         node.append(query2.value(0))
 
     if counter2 != 1:
@@ -82,8 +88,8 @@ def genStartNode(start, end):
                         ' and endnode is:' + str(end))
     return node
 
-
-def routeSetGeneration(start_zone, end_zone):
+# Generates a route set between two zone id:s.
+def routeSetGeneration(start_zone, end_zone, my, threshold):
     #
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
@@ -91,7 +97,7 @@ def routeSetGeneration(start_zone, end_zone):
     node = genStartNode(start_zone, end_zone)
     start = node[0]
     end = node[1]
-    #print("Start zone is: "+str(start_zone)+" End zone is: "+str(end_zone))
+    print("Start zone is: "+str(start)+" End zone is: "+str(end))
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
@@ -102,7 +108,8 @@ def routeSetGeneration(start_zone, end_zone):
     temp_q = db.exec_("SELECT * FROM temp_table1 ORDER BY path_seq")
     queries = []
     queries.append(temp_q)
-
+    temp_q.next()
+    print("Funkade databasen eller? :"+str(temp_q.value(0)))
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
     db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
@@ -113,7 +120,7 @@ def routeSetGeneration(start_zone, end_zone):
 
     cost_q.next()
     route1_cost = cost_q.value(0)
-    #print("Current cost route 1: " + str(route1_cost))
+    print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
     pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
@@ -125,7 +132,7 @@ def routeSetGeneration(start_zone, end_zone):
     i = 2
 
     nr_routes = 1
-
+    print(" Rätt värden? route_stop = "+str(route_stop) + " route1_cost = "+str(route1_cost) + " threshhold = "+str(threshold))
     while comp(route_stop, route1_cost, threshold):
         if pen_stop > 100000000:
             print("Warning: Pencost was over 1 billion")
@@ -176,7 +183,7 @@ def routeSetGeneration(start_zone, end_zone):
     db.exec_("INSERT INTO all_results SELECT * FROM result_table")
     return nr_routes
 
-
+# Prints a route set based on whats in result_table.
 def printRoutes(nr_routes):
     i = 1
     while i <= nr_routes:
@@ -186,36 +193,193 @@ def printRoutes(nr_routes):
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
-def main():
-    TicToc = TicTocGenerator()
-    tic()
+# Returns proportion of extra cost of alternative route in relation to opt route.
+def odEffect(start, end, lid):
+    start_zone = start
+    end_zone = end
+    removed_lid = lid
 
+    #Finding best, non-affected alternative route
+    query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
+                      " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
+                    " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  lid = "+str(removed_lid)+")")
+    query1.next()
+    id_alt = str(query1.value(0))
+    #print("id_alt är: "+ id_alt)
+
+    if id_alt== "NULL":
+        #Either there's only one route in the route set or the route set is empty
+        query = db.exec_("SELECT MIN(did) FROM all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+"")
+        query.next()
+
+        if query.value(0) :
+            #There is no route that is not affected
+            return -1
+        else:
+            #There is no routes with that start and end zone
+            return -2;
+
+    elif  id_alt == "1":
+        #print("Zon påverkas inte")
+        return -3
+    else:
+        #print("Zon påverkas och bästa id är:" + id_alt)
+
+        # Fetching cost of the optimal route and the alternative
+        query2 = db.exec_("SELECT sum(link_cost) from all_results where "
+                          " (start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+") AND "
+                                        "(did = 1 OR did = "+str(id_alt)+") group by did")
+        query2.next()
+        # Best cost
+        cost_opt = str(query2.value(0))
+
+        # Alternative cost
+        query2.next()
+        cost_alt = str(query2.value(0))
+
+        # Proportion of extra cost of alternative route in relation to opt route
+        # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
+        return (float(cost_alt)/float(cost_opt))
+
+# Create_table creates necessary tables for visualization of the OD-pairs in star_list and end_list
+def create_tables(start_list, end_list,lid):
+    # Create OD_lines table
+    db.exec_("DROP table if exists OD_lines")
+    db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into od_lines "
+             "FROM emme_zones where id = " + str(start_list[0]) + " OR id = " + str(end_list[0]) + "")
+
+    # Create emme_result table
+    db.exec_("DROP table if exists emme_results")
+    db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
+
+    i = 0
+    while i < len(start_list):
+        if i > 0:
+            db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
+                 "AS geom FROM emme_zones where id = "+str(start_list[i])+" OR id = "+str(end_list[i])+"")
+
+        result_test = odEffect(start_list[i], end_list[i], lid)
+        print("Result of " + str(i) + " is: " + str(result_test))
+        db.exec_(
+            "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(start_list[i]) + "'"
+                                                                                                                    " OR id = '" + str(
+                end_list[i]) + "';")
+
+        i = i + 1
+
+    db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
+
+# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
+def many_zones(start_node, end_list,lid):
+
+    count3 = 0
+    count2 = 0
+    count1 = 0
+    count_detour = 0
+    sum_detour = 0
+
+    i = 0
+    while i < len(end_list):
+        result_test = odEffect(start_node, end_list[i], lid)
+
+        if result_test == -3:
+            count3 += 1
+        elif result_test == -2:
+            count2 += 1
+        elif result_test == -1:
+            count1 += 1
+        else:
+            count_detour += 1
+            sum_detour += result_test
+        i = i + 1
+
+    mean_detour = sum_detour/count_detour
+    return [count3,count2,count1, mean_detour, i]
+
+# Print zones from emme_results
+def print_zones():
+
+    sqlcall = "(SELECT * FROM emme_results)"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+    layer = QgsVectorLayer(uri.uri(), "result_impairment " , "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+
+    values = (
+        ('Not affected', -3, -3, QColor.fromRgb(0, 0, 200)),
+        ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
+        ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
+        ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
+        ('Alternative route exists', 0, 1000, QColor.fromRgb(102, 255, 102)),
+    )
+
+    # create a category for each item in values
+    ranges = []
+    for label, lower, upper, color in values:
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol.setColor(QColor(color))
+        rng = QgsRendererRange(lower, upper, symbol, label)
+        ranges.append(rng)
+
+    ## create the renderer and assign it to a layer
+    expression = 'alt_route_cost' # field name
+    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+    #iface.mapCanvas().refresh()
+
+# Print lines from od_lines
+def print_lines():
+    # sqlcall = "(SELECT * FROM od_lines)"
+    # uri.setDataSource("", sqlcall, "geom", "", "geom")
+    # layer = QgsVectorLayer(uri.uri(), "od_lines ", "postgres")
+    # QgsProject.instance().addMapLayer(layer)
+    #
+    # ## create the renderer and assign it to a layer
+    # expression = 'geom'  # field name
+    # layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+    # # iface.mapCanvas().refresh()
+
+    sqlcall = "(SELECT * FROM od_lines )"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+    layert = QgsVectorLayer(uri.uri(), " OD_pairs ", "postgres")
+    QgsProject.instance().addMapLayer(layert)
+    print("går in")
+
+
+
+# DATABASE CONNECTION ------------------------------------------------------
+uri = QgsDataSourceUri()
+# set host name, port, database name, username and password
+uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
+print(uri.uri())
+db = QSqlDatabase.addDatabase('QPSQL')
+
+if db.isValid():
+    print("QPSQL db is valid")
+    db.setHostName(uri.host())
+    db.setDatabaseName(uri.database())
+    db.setPort(int(uri.port()))
+    db.setUserName(uri.username())
+    db.setPassword(uri.password())
+    # open (create) the connection
+    if db.open():
+        print("Opened %s" % uri.uri())
+    else:
+        err = db.lastError()
+        print(err.driverText())
+
+# DATABASE CONNECTION COMPLETE ---------------------------------------------
+
+
+def main():
+
+    tic()
     removeRoutesLayers()
 
-    # Connect to the database can be done in functions if we make that work
-    uri = QgsDataSourceUri()
-    # set host name, port, database name, username and password
-    uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
-    print(uri.uri())
-    db = QSqlDatabase.addDatabase('QPSQL')
-
-    # Variable definitions
-    my = 0.5
-    threshold = 1.6
-# Skicka in i funktioner.
     if db.isValid():
-        print("QPSQL db is valid")
-        db.setHostName(uri.host())
-        db.setDatabaseName(uri.database())
-        db.setPort(int(uri.port()))
-        db.setUserName(uri.username())
-        db.setPassword(uri.password())
-        # open (create) the connection
-        if db.open():
-            print("Opened %s" % uri.uri())
-        else:
-            err = db.lastError()
-            print(err.driverText())
+
+        # Variable definitions
+        my = 0.5
+        threshold = 1.6
         #___________________________________________________________________________________________________________________
         # Generating "all" the route sets needed.
         # alla_od = db.exec_("SELECT id FROM emme_zones ORDER BY id")
@@ -239,7 +403,7 @@ def main():
         #Start generating several route sets
 
         # List of OD-pairs
-        #start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
+
         #start_list = [7954, 7954, 7954, 7954]
         #end_list = [7990, 7949, 6913, 6872]
         # start_list = [7137, 7162]
@@ -257,29 +421,25 @@ def main():
         #     print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
         #
         #     nr_routes.append(routeSetGeneration(start_list[x], end_list[x]))
-
-
-
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
 
-        start_zone = 6785
-        end_zone = 7405
-
-
-        nr_routes = routeSetGeneration(start_zone, end_zone)
-        printRoutes(nr_routes)
-        print("JOHNNY")
-
-
-
-        toc();
-
+        # start_zone = 6785
+        # end_zone = 7405
+        #
+        # nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
+        # printRoutes(nr_routes)
+        #
+        #
+        #
+        #
+        # toc();
         #___________________________________________________________________________________________________________________
-
-
-# End of Function definitions
+        removed_lid = 83025 #Götgatan
+        start_list_selected = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+        end_list_selected = [7662, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
+        create_tables(start_list_selected, end_list_selected, removed_lid)
 
 
 if __name__ == "__main__" or __name__ == "__console__":
