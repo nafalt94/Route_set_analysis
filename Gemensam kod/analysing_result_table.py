@@ -24,13 +24,11 @@ def tic():
     # Records a time in TicToc, marks the beginning of a time interval
     toc(False)
 
-
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtSql import *
 from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
-
 
 tic()
 ## Connect to the database
@@ -62,13 +60,12 @@ if db.isValid():
             err = db.lastError()
             print (err.driverText())
 
-# od_effect(start zone,end zone,LID of the removed link)
+# od_effect (start zone,end zone,LID of the removed link)
 # Function returns proportion of extra cost of alternative route in relation to opt route
 def odEffect(start, end, lid):
     start_zone = start
     end_zone = end
     removed_lid = lid
-
 
     #Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
@@ -76,11 +73,10 @@ def odEffect(start, end, lid):
                     " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  lid = "+str(removed_lid)+")")
     query1.next()
     id_alt = str(query1.value(0))
-    print("id_alt är: "+ id_alt)
+    #print("id_alt är: "+ id_alt)
 
     if id_alt== "NULL":
         #Either there's only one route in the route set or the route set is empty
-
         query = db.exec_("SELECT MIN(did) FROM all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+"")
         query.next()
 
@@ -113,42 +109,73 @@ def odEffect(start, end, lid):
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return (float(cost_alt)/float(cost_opt))
 
-#odLinkLayer creates a table named OD_lines including vectors between the OD-pairs in star_list and end_list
-def odLinkLayer(start_list, end_list):
+#create_table creates neccessary tables for visualization of the OD-pairs in star_list and end_list
+def create_tables(start_list, end_list,lid):
+    # Create OD_lines table
     db.exec_("DROP table if exists OD_lines")
+    db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into od_lines "
+             "FROM emme_zones where id = " + str(start_list[0]) + " OR id = " + str(end_list[0]) + "")
 
-    i = 1
+    # Create emme_result table
+    db.exec_("DROP table if exists emme_results")
+    db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
+
+    i = 0
     while i < len(start_list):
-        db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
+        if i > 0:
+            db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
                  "AS geom FROM emme_zones where id = "+str(start_list[i])+" OR id = "+str(end_list[i])+"")
+
+        result_test = odEffect(start_list[i], end_list[i], lid)
+        print("Result of " + str(i) + " is: " + str(result_test))
+        db.exec_(
+            "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(start_list[i]) + "'"
+                                                                                                                    " OR id = '" + str(
+                end_list[i]) + "';")
+
         i = i + 1
 
+    db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
-start_zone = 7137
-end_zone = 7320
+# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
+def many_zones(start_node, end_list,lid):
 
+    count3 = 0
+    count2 = 0
+    count1 = 0
+    count_detour = 0
+    sum_detour = 0
+
+    i = 0
+    while i < len(end_list):
+        result_test = odEffect(start_node, end_list[i], lid)
+
+        if result_test == -3:
+            count3 += 1
+        elif result_test == -2:
+            count2 += 1
+        elif result_test == -1:
+            count1 += 1
+        else:
+            count_detour += 1
+            sum_detour += result_test
+        i = i + 1
+
+    mean_detour = sum_detour/count_detour
+    return [count3,count2,count1, mean_detour, i]
 
 removed_lid = 83025 #Götgatan
-# removed_lid = 84245
-
 #List of OD-pairs
-start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
-end_list = [7662, 7878, 7642, 7630, 7878, 6953, 7182]
+start_list_selected = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+end_list_selected = [7662, 7878, 7642, 7630, 7878, 6953, 7182,7609]
 
-# Create emme_result table
-db.exec_("DROP table if exists emme_results")
-db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
+start_list_multiple = [6904, 6904, 6904, 6904, 6904, 6904, 6904, 6904]
+end_list_multiple = [7662, 7878, 7642, 7630, 7878, 6953, 7182,7609]
 
 
-i=0
-while i < len(start_list):
-    result_test = odEffect(start_list[i], end_list[i], removed_lid)
-    print("Result of "+str(i)+ " is: " + str(result_test))
-    db.exec_("UPDATE emme_results SET alt_route_cost = "+str(result_test)+" WHERE id = '"+str(start_list[i])+"'"
-                                            " OR id = '"+str(end_list[i])+"';")
-    i = i + 1
-
-odLinkLayer(start_list, end_list)
+create_tables(start_list_selected, end_list_selected,removed_lid)
+#res = many_zones(start_list_multiple[0],end_list_multiple,removed_lid)
+#print("Result is: "+ str(res))
 
 toc();
 

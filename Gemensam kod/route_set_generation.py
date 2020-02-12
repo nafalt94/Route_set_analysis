@@ -186,7 +186,6 @@ def printRoutes(nr_routes):
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
-
 def main():
     TicToc = TicTocGenerator()
     tic()
@@ -278,6 +277,7 @@ def main():
         toc();
 
         #___________________________________________________________________________________________________________________
+
 
 # End of Function definitions
 

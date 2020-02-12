@@ -28,7 +28,7 @@ dbExistsTable(con, "model_graph")
 # query the data from postgreSQL 
 od_matrix <- dbGetQuery(con, "select id_ori,id_dest, ST_x(geom_ori) as x_origin, ST_y(geom_ori) as y_origin,
 ST_x(geom_dest) as x_dest, ST_y(geom_dest) as y_dest, 
-ST_length(geom_line) as dis from all_od_pairs" )
+ST_length(geom_line) as dis,geom_line as geom from all_od_pairs" )
  
 
 od_matrix.new<- od_matrix[,c(3,4,5,6,7)]
@@ -45,11 +45,11 @@ od_matrix.new$dis<- normalize(od_matrix.new$dis)
 
 head(od_matrix.new)
 
-result<- kmeans(od_matrix.new,10) #aplly k-means algorithm with no. of centroids(k)=3
+result<- kmeans(od_matrix.new,50) #aplly k-means algorithm with no. of centroids(k)=3
 result$size # gives no. of records in each cluster
-result$cluster
+#result$cluster
 result_cluster = result$cluster
-result$medoids
+#result$medoids
 
 #od_matrix including cluster
 od_matrix_result = cbind(od_matrix, result$cluster)
@@ -60,3 +60,9 @@ od_matrix_result = cbind(od_matrix, result$cluster)
 #plot(od_matrix.new[c(3,4)], col=result$cluster)# Plot to see how Petal.Length and Petal.Width data points have been distributed in clusters
 #plot(od_matrix.new[c(3,4)], col=od_matrix.class)
 
+
+
+## Writing to DB
+dbWriteTable(con, "cluster_result", od_matrix_result, append = F) 
+
+# sen skriv detta i postgresql: ALTER TABLE cluster_result ALTER COLUMN geom TYPE Geometry USING geom::Geometry;
