@@ -8,4 +8,7 @@
    -Kolla varför 6785->7405 inte generare några rutter-
    
    -Lista ut hur vi kan visualisera överlappande länkar på ett bra sätt
+   
+   -Testa A* när vi kommit igång med lite fler OD-par.
   
+  - Vad är fel på   start_zone = 6785 end_zone = 7405
