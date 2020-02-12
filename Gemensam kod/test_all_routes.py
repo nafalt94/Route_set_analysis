@@ -236,7 +236,7 @@ def onetoManyPenalty(one_node, many_nodes_list):
     db.exec_("DROP TABLE if exists dijk_result_table")
     db.exec_("SELECT 1 AS did,* INTO \
         dijk_result_table FROM dijk_temp_table1")
-
+    print("Route 1 inserted into dijk_result table!!")
 
 
 def alltoAll(limit):
