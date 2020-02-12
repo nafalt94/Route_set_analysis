@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
 
+print(__name__)
 # Function definitions
 def TicTocGenerator():
     # Generator that returns time differences
@@ -186,94 +187,103 @@ def printRoutes(nr_routes):
         i = i + 1
 
 
+def main():
+    TicToc = TicTocGenerator()
+    tic()
+
+    removeRoutesLayers()
+
+    # Connect to the database can be done in functions if we make that work
+    uri = QgsDataSourceUri()
+    # set host name, port, database name, username and password
+    uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
+    print(uri.uri())
+    db = QSqlDatabase.addDatabase('QPSQL')
+
+    # Variable definitions
+    my = 0.5
+    threshold = 1.6
+# Skicka in i funktioner.
+    if db.isValid():
+        print("QPSQL db is valid")
+        db.setHostName(uri.host())
+        db.setDatabaseName(uri.database())
+        db.setPort(int(uri.port()))
+        db.setUserName(uri.username())
+        db.setPassword(uri.password())
+        # open (create) the connection
+        if db.open():
+            print("Opened %s" % uri.uri())
+        else:
+            err = db.lastError()
+            print(err.driverText())
+        #___________________________________________________________________________________________________________________
+        # Generating "all" the route sets needed.
+        # alla_od = db.exec_("SELECT id FROM emme_zones ORDER BY id")
+        # id = []
+        # while alla_od.next():
+        #     id.append(alla_od.value(0))
+
+        # nr_routes = []
+        # db.exec_("DROP TABLE if exists all_results")
+        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+        #
+        # for x in range(int(len(id)/2)):
+        #     nr_routes = routeSetGeneration(id[int(x)], id[int(x)+int(len(id)/2)]) # only even nr od-zones
+        #     print("start: "+str(id[int(x)])+"   and end: "+str(id[int(x)+int(len(id)/2)]))
+
+        # __________________________________________________________________________________________________________________
+        #Start generating several route sets
+
+        # List of OD-pairs
+        #start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
+        #start_list = [7954, 7954, 7954, 7954]
+        #end_list = [7990, 7949, 6913, 6872]
+        # start_list = [7137, 7162]
+        # end_list = [7320, 6836]
+        #
+        # nr_routes = []
+        # db.exec_("DROP TABLE if exists all_results")
+        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+        #
+        # for x in range(len(end_list)):
+        #     print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
+        #
+        #     nr_routes.append(routeSetGeneration(start_list[x], end_list[x]))
+
+
+
+        #___________________________________________________________________________________________________________________
+
+        # Generating a single route set
+
+        start_zone = 6785
+        end_zone = 7405
+
+
+        nr_routes = routeSetGeneration(start_zone, end_zone)
+        printRoutes(nr_routes)
+        print("JOHNNY")
+
+
+
+        toc();
+
+        #___________________________________________________________________________________________________________________
+
 # End of Function definitions
 
-TicToc = TicTocGenerator()
-tic()
-removeRoutesLayers()
 
-# Connect to the database can be done in functions if we make that work
-uri = QgsDataSourceUri()
-# set host name, port, database name, username and password
-uri.setConnection("localhost", "5432", "exjobb", "postgres", "password123")
-print(uri.uri())
-db = QSqlDatabase.addDatabase('QPSQL')
-
-# Variable definitions
-my = 0.5
-threshold = 1.6
-
-if db.isValid():
-    print("QPSQL db is valid")
-    db.setHostName(uri.host())
-    db.setDatabaseName(uri.database())
-    db.setPort(int(uri.port()))
-    db.setUserName(uri.username())
-    db.setPassword(uri.password())
-    # open (create) the connection
-    if db.open():
-        print("Opened %s" % uri.uri())
-    else:
-        err = db.lastError()
-        print(err.driverText())
-    #___________________________________________________________________________________________________________________
-    # Generating "all" the route sets needed.
-    # alla_od = db.exec_("SELECT id FROM emme_zones ORDER BY id")
-    # id = []
-    # while alla_od.next():
-    #     id.append(alla_od.value(0))
-
-    # nr_routes = []
-    # db.exec_("DROP TABLE if exists all_results")
-    # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-    # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-    # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-    # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-    # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-    #
-    # for x in range(int(len(id)/2)):
-    #     nr_routes = routeSetGeneration(id[int(x)], id[int(x)+int(len(id)/2)]) # only even nr od-zones
-    #     print("start: "+str(id[int(x)])+"   and end: "+str(id[int(x)+int(len(id)/2)]))
-
-    # __________________________________________________________________________________________________________________
-    #Start generating several route sets
-
-    # List of OD-pairs
-    #start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304]
-    start_list = [7954, 7954, 7954, 7954]
-    end_list = [7990, 7949, 6913, 6950]
-    # start_list = [7137, 7162]
-    # end_list = [7320, 6836]
-
-    nr_routes = []
-    db.exec_("DROP TABLE if exists all_results")
-    db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-	node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-	link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-    end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-    speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-
-    for x in range(len(end_list)):
-        print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
-
-        nr_routes.append(routeSetGeneration(start_list[x], end_list[x]))
-
-   
-
-    #___________________________________________________________________________________________________________________
-
-    # Generating a single route set
-
-    # start_zone = 6785
-    # end_zone = 7405
-    # start_zone = 7154
-    # end_zone = 7255
-    #
-    # nr_routes = routeSetGeneration(start_zone, end_zone)
-    # printRoutes(nr_routes)
+if __name__ == "__main__" or __name__ == "__console__":
+    main()
 
 
-    #___________________________________________________________________________________________________________________
 
-
-toc();
