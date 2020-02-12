@@ -193,7 +193,8 @@ def printRoutes(nr_routes):
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
-# Returns proportion of extra cost of alternative route in relation to opt route.
+# od_effect (start zone,end zone,LID of the removed link)
+# Function returns proportion of extra cost of alternative route in relation to opt route
 def odEffect(start, end, lid):
     start_zone = start
     end_zone = end
@@ -241,7 +242,7 @@ def odEffect(start, end, lid):
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return (float(cost_alt)/float(cost_opt))
 
-# Create_table creates necessary tables for visualization of the OD-pairs in star_list and end_list
+#create_table creates neccessary tables for visualization of the OD-pairs in star_list and end_list
 def create_tables(start_list, end_list,lid):
     # Create OD_lines table
     db.exec_("DROP table if exists OD_lines")
@@ -326,23 +327,11 @@ def print_zones():
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
     #iface.mapCanvas().refresh()
 
-# Print lines from od_lines
-def print_lines():
-    # sqlcall = "(SELECT * FROM od_lines)"
-    # uri.setDataSource("", sqlcall, "geom", "", "geom")
-    # layer = QgsVectorLayer(uri.uri(), "od_lines ", "postgres")
-    # QgsProject.instance().addMapLayer(layer)
-    #
-    # ## create the renderer and assign it to a layer
-    # expression = 'geom'  # field name
-    # layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
-    # # iface.mapCanvas().refresh()
-
+    # Print lines from od_lines
     sqlcall = "(SELECT * FROM od_lines )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
     layert = QgsVectorLayer(uri.uri(), " OD_pairs ", "postgres")
     QgsProject.instance().addMapLayer(layert)
-    print("går in")
 
 
 
@@ -378,7 +367,7 @@ def main():
     if db.isValid():
 
         # Variable definitions
-        my = 0.5
+        my = 1
         threshold = 1.6
         #___________________________________________________________________________________________________________________
         # Generating "all" the route sets needed.
@@ -404,23 +393,23 @@ def main():
 
         # List of OD-pairs
 
-        #start_list = [7954, 7954, 7954, 7954]
-        #end_list = [7990, 7949, 6913, 6872]
-        # start_list = [7137, 7162]
-        # end_list = [7320, 6836]
-        #
-        # nr_routes = []
-        # db.exec_("DROP TABLE if exists all_results")
-        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-        #
-        # for x in range(len(end_list)):
-        #     print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
-        #
-        #     nr_routes.append(routeSetGeneration(start_list[x], end_list[x]))
+        start_list = [7954, 7954, 7954, 7954]
+        end_list = [7990, 7949, 6913, 6872]
+        start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+        end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
+
+        nr_routes = []
+        db.exec_("DROP TABLE if exists all_results")
+        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+        for x in range(len(end_list)):
+            print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
+
+            nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
@@ -437,9 +426,14 @@ def main():
         # toc();
         #___________________________________________________________________________________________________________________
         removed_lid = 83025 #Götgatan
-        start_list_selected = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        end_list_selected = [7662, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
-        create_tables(start_list_selected, end_list_selected, removed_lid)
+        # start_list_selected = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+        # end_list_selected = [7662, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
+        # create_tables(start_list_selected, end_list_selected, removed_lid)
+
+
+        # create_tables(start_list, end_list, removed_lid)
+        # removeRoutesLayers()
+        # print_zones()
 
 
 if __name__ == "__main__" or __name__ == "__console__":
