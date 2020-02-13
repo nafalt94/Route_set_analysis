@@ -77,7 +77,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
 
-    node = genStartNode(start_zone, end_zone)
+    node = [genonenode(start_zone)]
+    node.append(genonenode(end_zone))
     start = node[0]
     end = node[1]
     print("Start zone is: "+str(start)+" End zone is: "+str(end))
@@ -125,7 +126,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         delta_query = db.exec_("Select COUNT(*) from result_table")
         delta_query.next()
         delta = delta_query.value(0)
-        print("DELTA VALUE IS =:"+str(delta))
+        #print("DELTA VALUE IS =:"+str(delta))
         # Parameter
 
         # Route 2
@@ -339,7 +340,7 @@ def getAllNodes():
 
     return(node_list)
 
-# Generate routes between one_node to all the rest
+# Generate shortest path between one_node to all the other
 def onetoMany(one_node):
     print("one to many")
 
@@ -384,51 +385,27 @@ def main():
         my = 1
         threshold = 1.6
         #___________________________________________________________________________________________________________________
-        # Generating "all" the route sets needed.
-        # alla_od = db.exec_("SELECT id FROM emme_zones ORDER BY id")
-        # id = []
-        # while alla_od.next():
-        #     id.append(alla_od.value(0))
-        #
-        # nr_routes = []
-        # db.exec_("DROP TABLE if exists all_results")
-        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-        #
-        # for x in range(int(len(id)/2)):
-        #     nr_routes = routeSetGeneration(id[int(x)], id[int(x)+int(len(id)/2)]) # only even nr od-zones
-        #     print("start: "+str(id[int(x)])+"   and end: "+str(id[int(x)+int(len(id)/2)]))
 
         # __________________________________________________________________________________________________________________
         #Start generating several route sets
 
         # List of OD-pairs
-        #
-        # start_list = [7954, 7954, 7954, 7954]
-        #
-        # end_list = [7990, 7949, 6913, 6950]
-        #
-        # print("cheers!")
-        #
-        # end_list = [7990, 7949, 6913, 6872]
-        # start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        # end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
-        #
-        # nr_routes = []
-        # db.exec_("DROP TABLE if exists all_results")
-        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-        #
-        # for x in range(len(end_list)):
-        #     print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
-        #
-        #     nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
+
+        start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+        end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
+
+        nr_routes = []
+        db.exec_("DROP TABLE if exists all_results")
+        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+        for x in range(len(end_list)):
+            print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
+
+            nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
@@ -442,17 +419,15 @@ def main():
         #
         #
         #
-        one_node = genStartNode(6785)
-        onetoMany(one_node)
-        toc();
         #___________________________________________________________________________________________________________________
-        removed_lid = 83025 #Götgatan
-        # start_list_selected = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        # end_list_selected = [7662, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
-        # create_tables(start_list_selected, end_list_selected, removed_lid)
 
+        removed_lid = 83025 #Götgatan
         print_selected_pairs(start_list, end_list, removed_lid)
-        
+
+
+
+
+        toc();
 
 
 if __name__ == "__main__" or __name__ == "__console__":
