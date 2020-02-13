@@ -201,20 +201,14 @@ def printRoutes(nr_routes):
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
-def onetoMany(one_node, many_nodes_list):
+def onetoMany(one_node):
     print("one to many")
-    # build string with many_nodes_list
-    array_string = ""
-    for i in many_nodes_list:
-        if i != many_nodes_list[len(many_nodes_list)-1]:
-            array_string = array_string + " " + str(i) + ","
-        else:
-            array_string = array_string + " " + str(i)
-    print(array_string)
-    db.exec_("INSERT INTO dijk_test SELECT * FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
+
+    db.exec_("DROP TABLE if exists dijk_test")
+    db.exec_("SELECT * INTO dijk_test FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
     end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
-    FROM model_graph',"+str(one_node)+", ARRAY["+array_string+"] ) \
-    INNER JOIN cost_table ON(edge = lid) ")
+    FROM model_graph',"+str(one_node)+", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
+    (start_node='"+str(one_node)+"'))) INNER JOIN cost_table ON(edge = lid) ")
 
 def onetoManyPenalty(one_node, many_nodes_list):
     print("One to many with penalty")
@@ -242,7 +236,7 @@ def onetoManyPenalty(one_node, many_nodes_list):
 
     # route 2 and 3
     i = 2
-    delta = 1000
+    delta = 100
     nr_routes = 1
     while i < 4:
 
@@ -282,6 +276,25 @@ def alltoAll(limit):
         ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='"+str(x)+"')) \
         INNER JOIN cost_table ON(edge = lid) ")
 
+
+def getAllNodes(one_node):
+    db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+                   ORDER BY id, distance) AS score, id, lid, start_node, distance \
+                   FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
+                   distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+                   emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
+                   WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+                   WHERE score = 1)")
+
+    query = db.exec_("SELECT start_node FROM od_lid WHERE NOT(start_node = '" + str(one_node) + "')")
+    node_list = []
+    # Saving SQL answer into matrix
+    while query.next():
+        node_list.append(query.value(0))
+
+    print(len(node_list))
+    return node_list
+
 # End of Function definitions
 
 TicToc = TicTocGenerator()
@@ -315,17 +328,17 @@ if db.isValid():
     #___________________________________________________________________________________________________________________
 
     # Observe these are dummies only used to generate dijk_test because om lazy
-    start_node_test = 43912
-    end_node_test = 43838
+    #start_node_test = 43912
+    # end_node_test = 43838
 
     one_zone = 7954
-    many_zones_list = [7990, 7949, 6913, 6950]
-    many_nodes_list =[]
+    #many_zones_list = [7990, 7949, 6913, 6950]
+    # many_nodes_list =[]
     one_node = genonenode(one_zone)
-
-    for x in many_zones_list:
-        many_nodes_list.append(genonenode(x))
-
+    #
+    # for x in many_zones_list:
+    #     many_nodes_list.append(genonenode(x))
+    #
 
     # How many vs how many in manyToMany generation.
     limit = 10;
@@ -333,16 +346,18 @@ if db.isValid():
     db.exec_("DROP TABLE if exists dijk_test")
     db.exec_("SELECT * INTO dijk_test FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
          end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
-         FROM model_graph'," + str(start_node_test) + ", \
-         ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='" + str(end_node_test) + "')) \
+         FROM model_graph', 43912, \
+         ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='43838')) \
          INNER JOIN cost_table ON(edge = lid) ")
     db.exec_("DELETE FROM dijk_test")
 
     #manyToMany(limit)
     print("the node list: "+str(many_nodes_list))
     print("start node :"+str(one_node))
-    #onetoMany(one_node, many_nodes_list)
-    onetoManyPenalty(one_node, many_nodes_list)
+    onetoMany(one_node, getAllNodes(one_node))
+
+
+   #onetoManyPenalty(one_node, many_nodes_list)
 
 
 
