@@ -250,8 +250,10 @@ def analysis_multiple_zones(start_node, end_list,lid):
             count_detour += 1
             sum_detour += result_test
         i = i + 1
-
-    mean_detour = sum_detour/count_detour
+    if count_detour != 0:
+        mean_detour = sum_detour/count_detour
+    else:
+        mean_detour = 10000000000000
     return [count3,count2,count1, mean_detour, i]
 
 # Print route analysis for selected OD-pairs (no duplicate zones allowed)
@@ -350,6 +352,17 @@ def onetoMany(one_node):
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
+def allToAll():
+    db.exec_("DROP TABLE IF EXIST temp_test")
+    db.exec_(" select * into temp_test from all_results f where exists(select 1 from all_results l where lid = 83025 and"
+             " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
+
+    #Vad vill jag ta ut för varje zon? - Kanske hur många av dess par som inte påverkas, påverkas mer än x%,
+    # select * from all_results ger alla rutter
+
+
+
+    
 
 
 # DATABASE CONNECTION ------------------------------------------------------
@@ -377,7 +390,6 @@ if db.isValid():
 def main():
 
     tic()
-    removeRoutesLayers()
 
     if db.isValid():
 
@@ -390,22 +402,22 @@ def main():
         #Start generating several route sets
 
         # List of OD-pairs
-
+        #
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
+        #
+        # nr_routes = []
+        # db.exec_("DROP TABLE if exists all_results")
+        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+        # for y in range (len(end_list)):
+        #     for x in range(len(end_list)):
+        #         print("Generating start zone = "+str(start_list[y])+" end zone= "+str(end_list[x]))
+        #         nr_routes.append(routeSetGeneration(start_list[y], end_list[x], my, threshold))
 
-        nr_routes = []
-        db.exec_("DROP TABLE if exists all_results")
-        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-
-        for x in range(len(end_list)):
-            print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
-
-            nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
@@ -421,9 +433,14 @@ def main():
         #
         #___________________________________________________________________________________________________________________
 
+        #removeRoutesLayers()
         removed_lid = 83025 #Götgatan
-        print_selected_pairs(start_list, end_list, removed_lid)
-
+        #print_selected_pairs(start_list, end_list, removed_lid)
+        x = 0
+        while x < len(end_list):
+            print(str(analysis_multiple_zones(start_list[x], end_list, removed_lid)))
+            x = x+1
+        allToAll()
         toc();
 
 
