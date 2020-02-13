@@ -238,36 +238,8 @@ def odEffect(start, end, lid):
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return (float(cost_alt)/float(cost_opt))
 
-#create_table creates neccessary tables for visualization of the OD-pairs in star_list and end_list
-def create_tables(start_list, end_list,lid):
-    # Create OD_lines table
-    db.exec_("DROP table if exists OD_lines")
-    db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into od_lines "
-             "FROM emme_zones where id = " + str(start_list[0]) + " OR id = " + str(end_list[0]) + "")
-
-    # Create emme_result table
-    db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
-
-    i = 0
-    while i < len(start_list):
-        if i > 0:
-            db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
-                 "AS geom FROM emme_zones where id = "+str(start_list[i])+" OR id = "+str(end_list[i])+"")
-
-        result_test = odEffect(start_list[i], end_list[i], lid)
-        print("Result of " + str(i) + " is: " + str(result_test))
-        db.exec_(
-            "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(start_list[i]) + "'"
-                                                                                                                    " OR id = '" + str(
-                end_list[i]) + "';")
-
-        i = i + 1
-
-    db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
-
 # Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
-def many_zones(start_node, end_list,lid):
+def analysis_multiple_zones(start_node, end_list,lid):
 
     count3 = 0
     count2 = 0
@@ -293,8 +265,39 @@ def many_zones(start_node, end_list,lid):
     mean_detour = sum_detour/count_detour
     return [count3,count2,count1, mean_detour, i]
 
-# Print zones from emme_results
-def print_zones():
+# Print route analysis for selected OD-pairs (no duplicate zones allowed)
+def print_selected_pairs(start_list, end_list,lid):
+    #Removes layers not specified in removeRoutesLayers
+    removeRoutesLayers()
+
+    # first it creates neccessary db-tables for visualization of the OD-pairs in star_list and end_list
+    # Create OD_lines table
+    db.exec_("DROP table if exists OD_lines")
+    db.exec_("SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) AS geom into od_lines "
+             "FROM emme_zones where id = " + str(start_list[0]) + " OR id = " + str(end_list[0]) + "")
+
+    # Create emme_result table
+    db.exec_("DROP table if exists emme_results")
+    db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
+
+    i = 0
+    while i < len(start_list):
+        if i > 0:
+            db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
+                     "AS geom FROM emme_zones where id = " + str(start_list[i]) + " OR id = " + str(end_list[i]) + "")
+
+        result_test = odEffect(start_list[i], end_list[i], lid)
+        print("Result of " + str(i) + " is: " + str(result_test))
+        db.exec_(
+            "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(start_list[i]) + "'"
+                                                                                                                    " OR id = '" + str(
+                end_list[i]) + "';")
+
+        i = i + 1
+
+    db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
+
+
 
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
@@ -307,7 +310,8 @@ def print_zones():
         ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
         ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('Alternative route exists', 0, 1000, QColor.fromRgb(102, 255, 102)),
+        ('Alternative route: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Alternative route: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
     )
 
     # create a category for each item in values
@@ -422,10 +426,7 @@ def main():
         # end_list_selected = [7662, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
         # create_tables(start_list_selected, end_list_selected, removed_lid)
 
-
-        create_tables(start_list, end_list, removed_lid)
-        removeRoutesLayers()
-        print_zones()
+        print_selected_pairs(start_list, end_list, removed_lid)
 
 
 if __name__ == "__main__" or __name__ == "__console__":
