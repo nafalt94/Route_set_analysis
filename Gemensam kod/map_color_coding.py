@@ -27,8 +27,6 @@ def print_zones():
     expression = 'alt_route_cost' # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
     #iface.mapCanvas().refresh()
-
-
 def print_lines():
     # sqlcall = "(SELECT * FROM od_lines)"
     # uri.setDataSource("", sqlcall, "geom", "", "geom")
