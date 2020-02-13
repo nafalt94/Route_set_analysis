@@ -47,41 +47,28 @@ def removeRoutesLayers():
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table":
             QgsProject.instance().removeMapLayer(layer.id())
 
-# Generate start and end node based on zone id.
-def genStartNode(start, end):
-    # Create table with zone ids from emme_zones connected to start_nodes in model_graph
+# Give a zone id get a node id
+def genonenode(zone):
     db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
-        ORDER BY id, distance) AS score, id, lid, start_node, distance \
-        FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
-        distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
-        emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
-        WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
-        WHERE score = 1)")
+                ORDER BY id, distance) AS score, id, lid, start_node, distance \
+                FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
+                distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+                emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
+                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+                WHERE score = 1)")
 
-    query1 = db.exec_("SELECT start_node FROM od_lid WHERE id="+str(start))
-    query2 = db.exec_("SELECT start_node FROM od_lid WHERE id="+str(end))
-    node = []
+    query1 = db.exec_("SELECT start_node FROM od_lid WHERE id=" + str(zone))
     counter1 = 0
-    counter2 = 0
-    #print("Start: "+str(start)+" end: "+str(end))
+
     # Saving SQL answer into matrix
     while query1.next():
         counter1 += 1
-        #print("start node is :"+str(query1.value(0)))
-        node.append(query1.value(0))
+       # print("node is :" + str(query1.value(0)))
+        node = query1.value(0)
 
     if counter1 != 1:
-        raise Exception('No start node in Zones and startnode is:' +str(start)+
-                        ' and endnode is:'+ str(end))
+        raise Exception('No  node in Zones and startnode is:' + str(zone))
 
-    while query2.next():
-        counter2 += 1
-        #print("start node is :" + str(query2.value(0)))
-        node.append(query2.value(0))
-
-    if counter2 != 1:
-        raise Exception('No end node in Zones and startnode is:' + str(start) +
-                        ' and endnode is:' + str(end))
     return node
 
 # Generates a route set between two zone id:s.
@@ -330,6 +317,36 @@ def print_zones():
     layert = QgsVectorLayer(uri.uri(), " OD_pairs ", "postgres")
     QgsProject.instance().addMapLayer(layert)
 
+# Get a list with node_nr and zone_id.
+def getAllNodes():
+    db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+                   ORDER BY id, distance) AS score, id, lid, start_node, distance \
+                   FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
+                   distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
+                   emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
+                   WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+                   WHERE score = 1)")
+
+    query = db.exec_("SELECT start_node, id FROM od_lid")
+    node_list = []
+    # Saving SQL answer into matrix
+    while query.next():
+        node_list.append(query.value(0))
+
+    return(node_list)
+
+# Generate routes between one_node to all the rest
+def onetoMany(one_node):
+    print("one to many")
+
+    db.exec_("DROP TABLE if exists dijk_test")
+    db.exec_("SELECT * INTO dijk_test FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
+    end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
+    FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
+    (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
+
+
+
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
 # set host name, port, database name, username and password
@@ -368,7 +385,7 @@ def main():
         # id = []
         # while alla_od.next():
         #     id.append(alla_od.value(0))
-
+        #
         # nr_routes = []
         # db.exec_("DROP TABLE if exists all_results")
         # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
@@ -385,29 +402,29 @@ def main():
         #Start generating several route sets
 
         # List of OD-pairs
-
-        start_list = [7954, 7954, 7954, 7954]
-
-        end_list = [7990, 7949, 6913, 6950]
-
-        print("cheers!")
-
-        end_list = [7990, 7949, 6913, 6872]
-        start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
-
-        nr_routes = []
-        db.exec_("DROP TABLE if exists all_results")
-        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-
-        for x in range(len(end_list)):
-            print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
-
-            nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
+        #
+        # start_list = [7954, 7954, 7954, 7954]
+        #
+        # end_list = [7990, 7949, 6913, 6950]
+        #
+        # print("cheers!")
+        #
+        # end_list = [7990, 7949, 6913, 6872]
+        # start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+        # end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
+        #
+        # nr_routes = []
+        # db.exec_("DROP TABLE if exists all_results")
+        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+        #
+        # for x in range(len(end_list)):
+        #     print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
+        #
+        #     nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
@@ -421,6 +438,8 @@ def main():
         #
         #
         #
+        one_node = genStartNode(6785)
+        onetoMany(one_node)
         toc();
         #___________________________________________________________________________________________________________________
 
