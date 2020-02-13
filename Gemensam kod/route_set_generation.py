@@ -433,6 +433,7 @@ def main():
         # create_tables(start_list_selected, end_list_selected, removed_lid)
 
         print_selected_pairs(start_list, end_list, removed_lid)
+        
 
 
 if __name__ == "__main__" or __name__ == "__console__":
