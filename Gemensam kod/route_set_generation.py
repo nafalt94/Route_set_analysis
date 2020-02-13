@@ -48,7 +48,7 @@ def removeRoutesLayers():
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
-                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider":
+                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table":
             QgsProject.instance().removeMapLayer(layer.id())
 
 # Generate start and end node based on zone id.
@@ -142,6 +142,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         delta_query = db.exec_("Select COUNT(*) from result_table")
         delta_query.next()
         delta = delta_query.value(0)
+        print("DELTA VALUE IS =:"+str(delta))
         # Parameter
 
         # Route 2
@@ -404,23 +405,22 @@ def main():
 
         # List of OD-pairs
 
-        #start_list = [7954, 7954, 7954, 7954]
-        #end_list = [7990, 7949, 6913, 6872]
-        # start_list = [7137, 7162]
-        # end_list = [7320, 6836]
-        #
-        # nr_routes = []
-        # db.exec_("DROP TABLE if exists all_results")
-        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        # node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        # link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        # end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        # speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-        #
-        # for x in range(len(end_list)):
-        #     print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
-        #
-        #     nr_routes.append(routeSetGeneration(start_list[x], end_list[x]))
+        start_list = [7954, 7954, 7954, 7954]
+        end_list = [7990, 7949, 6913, 6950]
+
+        print("cheers!")
+        nr_routes = []
+        db.exec_("DROP TABLE if exists all_results")
+        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+        for x in range(len(end_list)):
+            print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
+
+            nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
@@ -434,12 +434,9 @@ def main():
         #
         #
         #
-        # toc();
+        toc();
         #___________________________________________________________________________________________________________________
-        removed_lid = 83025 #Götgatan
-        start_list_selected = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        end_list_selected = [7662, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
-        create_tables(start_list_selected, end_list_selected, removed_lid)
+
 
 
 if __name__ == "__main__" or __name__ == "__console__":
