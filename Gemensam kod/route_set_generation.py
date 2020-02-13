@@ -44,7 +44,7 @@ def removeRoutesLayers():
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
-                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider":
+                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table":
             QgsProject.instance().removeMapLayer(layer.id())
 
 # Generate start and end node based on zone id.
@@ -138,6 +138,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         delta_query = db.exec_("Select COUNT(*) from result_table")
         delta_query.next()
         delta = delta_query.value(0)
+        print("DELTA VALUE IS =:"+str(delta))
         # Parameter
 
         # Route 2
@@ -390,6 +391,11 @@ def main():
         # List of OD-pairs
 
         start_list = [7954, 7954, 7954, 7954]
+
+        end_list = [7990, 7949, 6913, 6950]
+
+        print("cheers!")
+
         end_list = [7990, 7949, 6913, 6872]
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
@@ -419,7 +425,7 @@ def main():
         #
         #
         #
-        # toc();
+        toc();
         #___________________________________________________________________________________________________________________
         removed_lid = 83025 #Götgatan
         # start_list_selected = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]

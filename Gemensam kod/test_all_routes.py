@@ -41,7 +41,7 @@ def removeRoutesLayers():
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
-                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results":
+                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "dijk_result_table":
             QgsProject.instance().removeMapLayer(layer.id())
 
 
@@ -237,6 +237,31 @@ def onetoManyPenalty(one_node, many_nodes_list):
     db.exec_("SELECT 1 AS did,* INTO \
         dijk_result_table FROM dijk_temp_table1")
     print("Route 1 inserted into dijk_result table!!")
+
+
+
+    # route 2 and 3
+    i = 2
+    delta = 1000
+    nr_routes = 1
+    while i < 4:
+
+        db.exec_("DROP TABLE if exists dijk_temp_table2")
+        db.exec_("SELECT * INTO dijk_temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
+        CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
+        FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 100000 AS reverse_cost \
+        FROM cost_table) AS subq LEFT JOIN \
+            (select lid as edge, max(cost) + (max(cost)/("+str(my)+" * min(cost)))*LN("+str(delta)+") AS cost \
+        from dijk_result_table group by lid, end_vid) AS pen ON \
+        (subq.id = pen.edge)'," + str(one_node) + ", ARRAY[" + array_string + "]) INNER JOIN cost_table ON(edge = lid)")
+
+        db.exec_("INSERT INTO dijk_result_table SELECT " + str(i) + " AS did,*  FROM dijk_temp_table2")
+        print("Route "+str(i)+" inserted into dijk_result table!!")
+        db.exec_("DROP TABLE if exists dijk_temp_table1")
+        db.exec_("SELECT * INTO dijk_temp_table1 from dijk_temp_table2")
+        i = i + 1
+        nr_routes = nr_routes + 1
+
 
 
 def alltoAll(limit):
