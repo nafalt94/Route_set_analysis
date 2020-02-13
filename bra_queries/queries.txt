@@ -43,3 +43,9 @@ WITH summary AS (
 SELECT s.*
   FROM summary s
  WHERE s.rk = 1
+ 
+ ## Ta ut alla rutter som går igenom en viss länk:
+ select * from all_results f
+where  exists (
+    select 1 from all_results l where lid = 83025 and (f.start_zone = l.start_zone 
+									and f.end_zone = l.end_zone and f.did = l.did))
