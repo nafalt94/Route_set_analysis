@@ -18,13 +18,11 @@ def TicTocGenerator():
         tf = time.time()
         yield tf - ti  # returns the time difference
 
-
 def toc(tempBool=True):
     # Prints the time difference yielded by generator instance TicToc
     tempTimeInterval = next(TicToc)
     if tempBool:
         print("Elapsed time: %f seconds.\n" % tempTimeInterval)
-
 
 def tic():
     # Records a time in TicToc, marks the beginning of a time interval
@@ -33,14 +31,12 @@ def tic():
 # Initialize TicToc function.
 TicToc = TicTocGenerator()
 
-
 # Compare if to var1/var2 < t
 def comp(var1, var2, t):
     if var1 / var2 < t:
         return True
     else:
         return False
-
 
 # Remove all GIS-layers except those stated in the function.
 def removeRoutesLayers():
@@ -333,8 +329,6 @@ def print_zones():
     layert = QgsVectorLayer(uri.uri(), " OD_pairs ", "postgres")
     QgsProject.instance().addMapLayer(layert)
 
-
-
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
 # set host name, port, database name, username and password
@@ -355,9 +349,7 @@ if db.isValid():
     else:
         err = db.lastError()
         print(err.driverText())
-
 # DATABASE CONNECTION COMPLETE ---------------------------------------------
-
 
 def main():
 
@@ -431,9 +423,9 @@ def main():
         # create_tables(start_list_selected, end_list_selected, removed_lid)
 
 
-        # create_tables(start_list, end_list, removed_lid)
-        # removeRoutesLayers()
-        # print_zones()
+        create_tables(start_list, end_list, removed_lid)
+        removeRoutesLayers()
+        print_zones()
 
 
 if __name__ == "__main__" or __name__ == "__console__":
