@@ -392,7 +392,7 @@ def main():
         # List of OD-pairs
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        end_list = [6837, 7878, 7642, 7630, 7878, 6953, 7182, 7609]
+        end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
 
         nr_routes = []
         db.exec_("DROP TABLE if exists all_results")
@@ -421,7 +421,8 @@ def main():
         #
         #___________________________________________________________________________________________________________________
 
-        removed_lid = 83025 #Götgatan
+        removed_lid = 89227 #Götgatan
+        removed_lid = 83025  # Söderledstunneln
         print_selected_pairs(start_list, end_list, removed_lid)
 
         toc();

@@ -253,7 +253,7 @@ def analysis_multiple_zones(start_node, end_list,lid):
     if count_detour != 0:
         mean_detour = sum_detour/count_detour
     else:
-        mean_detour = 10000000000000
+        mean_detour = -1
     return [count3,count2,count1, mean_detour, i]
 
 # Print route analysis for selected OD-pairs (no duplicate zones allowed)
@@ -352,17 +352,21 @@ def onetoMany(one_node):
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
-def allToAll():
+def allToAll(start_list,end_list,removed_lid):
     db.exec_("DROP TABLE IF EXIST temp_test")
-    db.exec_(" select * into temp_test from all_results f where exists(select 1 from all_results l where lid = 83025 and"
+    db.exec_(" select * into temp_test from all_results f where exists(select 1 from all_results l where lid = "+str(removed_lid)+" and"
              " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
 
     #Vad vill jag ta ut för varje zon? - Kanske hur många av dess par som inte påverkas, påverkas mer än x%,
     # select * from all_results ger alla rutter
 
+    x = 0
+    while x < len(end_list):
+        print(str(analysis_multiple_zones(start_list[x], end_list, removed_lid)))
+        x = x + 1
 
 
-    
+
 
 
 # DATABASE CONNECTION ------------------------------------------------------
@@ -434,13 +438,10 @@ def main():
         #___________________________________________________________________________________________________________________
 
         #removeRoutesLayers()
-        removed_lid = 83025 #Götgatan
-        #print_selected_pairs(start_list, end_list, removed_lid)
-        x = 0
-        while x < len(end_list):
-            print(str(analysis_multiple_zones(start_list[x], end_list, removed_lid)))
-            x = x+1
-        allToAll()
+        removed_lid = 89227 #Götgatan
+        removed_lid = 83025  # Söderledstunneln
+
+        allToAll(start_list,end_list,removed_lid)
         toc();
 
 
