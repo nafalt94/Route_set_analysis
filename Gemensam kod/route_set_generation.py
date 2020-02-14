@@ -168,6 +168,40 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     db.exec_("INSERT INTO all_results SELECT * FROM result_table")
     return nr_routes
 
+# Generates result table for selected OD-pairs
+def selectedODResultTable(start_list, end_list,my,threshold,removed_lid):
+    nr_routes = []
+    db.exec_("DROP TABLE if exists all_results")
+    db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+    node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+    link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+    end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+    speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+    for x in range(len(end_list)):
+        print("Generating start zone = " + str(start_list[x]) + " end zone= " + str(end_list[x]))
+
+        nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
+
+    # Creates new visualisation layer for selected pairs
+    print_selected_pairs(start_list, end_list, removed_lid)
+
+# Generates all to all result table
+def allToAllResultTable(list, my,threshold):
+    nr_routes = []
+    db.exec_("DROP TABLE if exists all_results")
+    db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+    node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+    link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+    end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+    speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+    for y in range (len(list)):
+        for x in range(len(list)):
+            # From and to same zone is not interesting
+            if y != x:
+                nr_routes.append(routeSetGeneration(list[y], list[x], my, threshold))
+
 # Prints a route set based on whats in result_table.
 def printRoutes(nr_routes):
     i = 1
@@ -393,19 +427,10 @@ def main():
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
-
-        nr_routes = []
-        db.exec_("DROP TABLE if exists all_results")
-        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-
-        for x in range(len(end_list)):
-            print("Generating start zone = "+str(start_list[x])+" end zone= "+str(end_list[x]))
-
-            nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
+        removed_lid = 89227 #Götgatan
+        removed_lid = 83025  # Söderledstunneln
+        #allToAllResultTable(start_list,my,threshold)
+        selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
@@ -421,9 +446,6 @@ def main():
         #
         #___________________________________________________________________________________________________________________
 
-        removed_lid = 89227 #Götgatan
-        removed_lid = 83025  # Söderledstunneln
-        print_selected_pairs(start_list, end_list, removed_lid)
 
         toc();
 
