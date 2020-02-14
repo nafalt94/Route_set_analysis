@@ -262,7 +262,7 @@ def odEffect(start, end, lid):
         return (float(cost_alt)/float(cost_opt))
 
 # Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
-def analysis_multiple_zones(start_node, end_list,lid):
+def analysis_multiple_zones(start_node,list,lid):
 
     count3 = 0
     count2 = 0
@@ -271,24 +271,25 @@ def analysis_multiple_zones(start_node, end_list,lid):
     sum_detour = 0
 
     i = 0
-    while i < len(end_list):
-        result_test = odEffect(start_node, end_list[i], lid)
+    while i < len(list):
+        if start_node != list[i]:
+            result_test = odEffect(start_node, list[i], lid)
 
-        if result_test == -3:
-            count3 += 1
-        elif result_test == -2:
-            count2 += 1
-        elif result_test == -1:
-            count1 += 1
-        else:
-            count_detour += 1
-            sum_detour += result_test
+            if result_test == -3:
+                count3 += 1
+            elif result_test == -2:
+                count2 += 1
+            elif result_test == -1:
+                count1 += 1
+            else:
+                count_detour += 1
+                sum_detour += result_test
         i = i + 1
-    if count_detour != 0:
-        mean_detour = sum_detour/count_detour
-    else:
-        mean_detour = -1
-    return [count3,count2,count1, mean_detour, i]
+        if count_detour != 0:
+            mean_detour = sum_detour/count_detour
+        else:
+            mean_detour = -1
+    return [count3,count2,count1, mean_detour, i-1]
 
 # Print route analysis for selected OD-pairs (no duplicate zones allowed)
 def print_selected_pairs(start_list, end_list,lid):
@@ -386,20 +387,71 @@ def onetoMany(one_node):
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
-def allToAll(start_list,end_list,removed_lid):
+def allToAll(list,removed_lid):
+
+    #Queryn skapar tabell för alla länkar som går igenom removed_lid
     db.exec_("DROP TABLE IF EXIST temp_test")
     db.exec_(" select * into temp_test from all_results f where exists(select 1 from all_results l where lid = "+str(removed_lid)+" and"
              " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
 
     #Vad vill jag ta ut för varje zon? - Kanske hur många av dess par som inte påverkas, påverkas mer än x%,
     # select * from all_results ger alla rutter
-
+    #
     x = 0
-    while x < len(end_list):
-        print(str(analysis_multiple_zones(start_list[x], end_list, removed_lid)))
+    while x < len(list):
+        print("För "+str(list[x] )+" blir det: " + str(analysis_multiple_zones(list[x],list, removed_lid)))
         x = x + 1
 
-
+    # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
+    #
+    #     # Create emme_result table
+    #     db.exec_("DROP table if exists emme_results")
+    #     db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
+    #
+    #     i = 0
+    #     while i < len(start_list):
+    #         if i > 0:
+    #             db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
+    #                      "AS geom FROM emme_zones where id = " + str(start_list[i]) + " OR id = " + str(
+    #                 end_list[i]) + "")
+    #
+    #         result_test = odEffect(start_list[i], end_list[i], lid)
+    #         print("Result of " + str(i) + " is: " + str(result_test))
+    #         db.exec_(
+    #             "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(
+    #                 start_list[i]) + "'"
+    #                                  " OR id = '" + str(
+    #                 end_list[i]) + "';")
+    #
+    #         i = i + 1
+    #
+    #     db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
+    #
+    #     sqlcall = "(SELECT * FROM emme_results)"
+    #     uri.setDataSource("", sqlcall, "geom", "", "id")
+    #     layer = QgsVectorLayer(uri.uri(), "result_impairment ", "postgres")
+    #     QgsProject.instance().addMapLayer(layer)
+    #
+    #     values = (
+    #         ('Not affected', -3, -3, QColor.fromRgb(0, 0, 200)),
+    #         ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
+    #         ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
+    #         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
+    #         ('Alternative route: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+    #         ('Alternative route: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
+    #     )
+    #
+    #     # create a category for each item in values
+    #     ranges = []
+    #     for label, lower, upper, color in values:
+    #         symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+    #         symbol.setColor(QColor(color))
+    #         rng = QgsRendererRange(lower, upper, symbol, label)
+    #         ranges.append(rng)
+    #
+    #     ## create the renderer and assign it to a layer
+    #     expression = 'alt_route_cost'  # field name
+    #     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
 
 
@@ -443,11 +495,13 @@ def main():
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
+        list = [6904, 6884,6837, 6776, 7642]
         removed_lid = 89227 #Götgatan
         removed_lid = 83025  # Söderledstunneln
-        #allToAllResultTable(start_list,my,threshold)
-        selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        allToAll(start_list,end_list,removed_lid)
+
+        #selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
+        allToAllResultTable(list,my,threshold)
+        allToAll(list,removed_lid)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
