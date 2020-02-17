@@ -81,7 +81,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     node.append(genonenode(end_zone))
     start = node[0]
     end = node[1]
-    print("Start zone is: "+str(start)+" End zone is: "+str(end))
+    #print("Start zone is: "+str(start)+" End zone is: "+str(end))
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
@@ -93,7 +93,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     queries = []
     queries.append(temp_q)
     temp_q.next()
-    print("Funkade databasen eller? :"+str(temp_q.value(0)))
+    #print("Funkade databasen eller? :"+str(temp_q.value(0)))
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
     db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
@@ -104,7 +104,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     cost_q.next()
     route1_cost = cost_q.value(0)
-    print("Current cost route 1: " + str(route1_cost))
+    #print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
     pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
@@ -116,10 +116,10 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     i = 2
 
     nr_routes = 1
-    print(" Rätt värden? route_stop = "+str(route_stop) + " route1_cost = "+str(route1_cost) + " threshhold = "+str(threshold))
+    #print(" Rätt värden? route_stop = "+str(route_stop) + " route1_cost = "+str(route1_cost) + " threshhold = "+str(threshold))
     while comp(route_stop, route1_cost, threshold):
         if pen_stop > 100000000:
-            print("Warning: Pencost was over 1 billion")
+            print("Warning: Pencost was over 1 billion for zone: " + str(start_zone) +" and end zone: " + str(end_zone))
             break
         # Calculating penalizing term (P. 14 in thesis work)
         # Delta value
@@ -201,6 +201,8 @@ def allToAllResultTable(list, my,threshold):
             # From and to same zone is not interesting
             if y != x:
                 nr_routes.append(routeSetGeneration(list[y], list[x], my, threshold))
+        progress = y/len(list)
+        #print("Patience! This is difficult, you know...  Progress:" + str(progress) + "%")
 
 # Prints a route set based on whats in result_table.
 def printRoutes(nr_routes):
@@ -404,7 +406,6 @@ def allToAll(list,removed_lids):
         removed_lid_string += " or lid =" + str(removed_lids[i])
         i +=1
     removed_lid_string += ")"
-    print(" string blir: " + removed_lid_string)
 
     #Queryn skapar tabell för alla länkar som går igenom removed_lid
     db.exec_("DROP TABLE IF EXIST temp_test")
@@ -414,13 +415,13 @@ def allToAll(list,removed_lids):
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0 as non_affected, 0 as nr_routes, 0 as all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
     i = 0
     while i < len(list):
         result = analysis_multiple_zones(list[i], list, removed_lids)
-        db.exec_("UPDATE emme_results SET non_affected = " + str(result[0]) +" , nr_routes = " +
-                str(result[1]) + " , all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
+        db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_routes = " +
+                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
                 str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
                 str(list[i] ) + ";")
         i +=1
@@ -432,9 +433,11 @@ def allToAll(list,removed_lids):
 
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('No impairment', -1, -1, QColor.fromRgb(0, 0, 200)),
-        ('Mean impairment: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
+        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean impairment: 1-20 % impairment', 0, 1.2, QColor.fromRgb(102, 255, 102)),
+        ('Mean impairment: 20-30 % impairment', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
+        ('Mean impairment: 30-50 % impairment', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
+        ('Mean impairment: 50-100 % impairment', 1.5, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -448,9 +451,6 @@ def allToAll(list,removed_lids):
     ## create the renderer and assign it to a layer
     expression = 'mean_impairment'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
-
-
-
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
@@ -494,10 +494,14 @@ def main():
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
-        list = [6904, 6884, 6837, 6776, 7835, 7864, 7967]
+        list = [6904, 6884, 6837, 6776, 7835, 7864, 7967, 6955,7570,7422,
+                7680,7557,7560,6879,6816, 7630,7162,7187,7227,7302]
+        #list = [6904, 6884, 6837]
         removed_lid = 89227  # Götgatan
         removed_lid = 83025  # Söderledstunneln
-        removed_lids = [83025, 84145, 222223333]
+        # [81488, 83171] för Essingeleden
+        # [83025, 84145] för Söderleden
+        removed_lids = [83025, 84145]
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
         allToAllResultTable(list,my,threshold)
