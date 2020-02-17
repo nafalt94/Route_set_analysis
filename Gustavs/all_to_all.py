@@ -214,15 +214,22 @@ def printRoutes(nr_routes):
 
 # od_effect (start zone,end zone,LID of the removed link)
 # Function returns proportion of extra cost of alternative route in relation to opt route
-def odEffect(start, end, lid):
+def odEffect(start, end, lids):
     start_zone = start
     end_zone = end
-    removed_lid = lid
+
+    removed_lid_string = "( lid = " + str(lids[0])
+    i = 1
+    while i < len(lids):
+        removed_lid_string += " or lid =" + str(lids[i])
+        i += 1
+    removed_lid_string += ")"
+
 
     #Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
                       " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                    " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  lid = "+str(removed_lid)+")")
+                    " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
     query1.next()
     id_alt = str(query1.value(0))
     #print("id_alt är: "+ id_alt)
@@ -262,7 +269,7 @@ def odEffect(start, end, lid):
         return (float(cost_alt)/float(cost_opt))
 
 # Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
-def analysis_multiple_zones(start_node,list,lid):
+def analysis_multiple_zones(start_node,list,lids):
 
     count3 = 0
     count2 = 0
@@ -273,7 +280,7 @@ def analysis_multiple_zones(start_node,list,lid):
     i = 0
     while i < len(list):
         if start_node != list[i]:
-            result_test = odEffect(start_node, list[i], lid)
+            result_test = odEffect(start_node, list[i], lids)
 
             if result_test == -3:
                 count3 += 1
@@ -319,7 +326,7 @@ def print_selected_pairs(start_list, end_list,lid):
                                                                                                                     " OR id = '" + str(
                 end_list[i]) + "';")
 
-        i = i + 1
+        i += 1
 
     db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
@@ -387,71 +394,60 @@ def onetoMany(one_node):
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
-def allToAll(list,removed_lid):
+def allToAll(list,removed_lids):
+    #Removes layers not specified in removeRoutesLayers
+    removeRoutesLayers()
+
+    removed_lid_string = "( lid = " + str(removed_lids[0])
+    i=1
+    while i < len(removed_lids):
+        removed_lid_string += " or lid =" + str(removed_lids[i])
+        i +=1
+    removed_lid_string += ")"
+    print(" string blir: " + removed_lid_string)
 
     #Queryn skapar tabell för alla länkar som går igenom removed_lid
     db.exec_("DROP TABLE IF EXIST temp_test")
-    db.exec_(" select * into temp_test from all_results f where exists(select 1 from all_results l where lid = "+str(removed_lid)+" and"
+    db.exec_(" select * into temp_test from all_results f where exists(select 1 from all_results l where "+removed_lid_string+" and"
              " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
 
-    #Vad vill jag ta ut för varje zon? - Kanske hur många av dess par som inte påverkas, påverkas mer än x%,
-    # select * from all_results ger alla rutter
-    #
-    x = 0
-    while x < len(list):
-        print("För "+str(list[x] )+" blir det: " + str(analysis_multiple_zones(list[x],list, removed_lid)))
-        x = x + 1
-
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
-    #
-    #     # Create emme_result table
-    #     db.exec_("DROP table if exists emme_results")
-    #     db.exec_("SELECT 0.0 as alt_route_cost,* INTO emme_results FROM emme_zones")
-    #
-    #     i = 0
-    #     while i < len(start_list):
-    #         if i > 0:
-    #             db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
-    #                      "AS geom FROM emme_zones where id = " + str(start_list[i]) + " OR id = " + str(
-    #                 end_list[i]) + "")
-    #
-    #         result_test = odEffect(start_list[i], end_list[i], lid)
-    #         print("Result of " + str(i) + " is: " + str(result_test))
-    #         db.exec_(
-    #             "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(
-    #                 start_list[i]) + "'"
-    #                                  " OR id = '" + str(
-    #                 end_list[i]) + "';")
-    #
-    #         i = i + 1
-    #
-    #     db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
-    #
-    #     sqlcall = "(SELECT * FROM emme_results)"
-    #     uri.setDataSource("", sqlcall, "geom", "", "id")
-    #     layer = QgsVectorLayer(uri.uri(), "result_impairment ", "postgres")
-    #     QgsProject.instance().addMapLayer(layer)
-    #
-    #     values = (
-    #         ('Not affected', -3, -3, QColor.fromRgb(0, 0, 200)),
-    #         ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
-    #         ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
-    #         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-    #         ('Alternative route: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
-    #         ('Alternative route: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
-    #     )
-    #
-    #     # create a category for each item in values
-    #     ranges = []
-    #     for label, lower, upper, color in values:
-    #         symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-    #         symbol.setColor(QColor(color))
-    #         rng = QgsRendererRange(lower, upper, symbol, label)
-    #         ranges.append(rng)
-    #
-    #     ## create the renderer and assign it to a layer
-    #     expression = 'alt_route_cost'  # field name
-    #     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+    # Create emme_result table
+    db.exec_("DROP table if exists emme_results")
+    db.exec_("SELECT 0 as non_affected, 0 as nr_routes, 0 as all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+
+    i = 0
+    while i < len(list):
+        result = analysis_multiple_zones(list[i], list, removed_lids)
+        db.exec_("UPDATE emme_results SET non_affected = " + str(result[0]) +" , nr_routes = " +
+                str(result[1]) + " , all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
+                str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
+                str(list[i] ) + ";")
+        i +=1
+
+    sqlcall = "(SELECT * FROM emme_results)"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+    layer = QgsVectorLayer(uri.uri(), "result_all_to_all ", "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+    values = (
+        ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
+        ('No impairment', -1, -1, QColor.fromRgb(0, 0, 200)),
+        ('Mean impairment: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Mean impairment: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
+    )
+
+    # create a category for each item in values
+    ranges = []
+    for label, lower, upper, color in values:
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol.setColor(QColor(color))
+        rng = QgsRendererRange(lower, upper, symbol, label)
+        ranges.append(rng)
+
+    ## create the renderer and assign it to a layer
+    expression = 'mean_impairment'  # field name
+    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
 
 
@@ -495,13 +491,14 @@ def main():
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
-        list = [6904, 6884,6837, 6776, 7642]
+        list = [6904, 6884,6837, 6776, 7835, 7864, 7967]
         removed_lid = 89227 #Götgatan
         removed_lid = 83025  # Söderledstunneln
+        removed_lids = [83025, 84145, 222223333]
 
         #selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        allToAllResultTable(list,my,threshold)
-        allToAll(list,removed_lid)
+        #allToAllResultTable(list,my,threshold)
+        allToAll(list,removed_lids)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
