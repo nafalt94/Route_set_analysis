@@ -396,6 +396,7 @@ def onetoMany(one_node):
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
+# Analysing all-to-all result for list and removed lid
 def allToAll(list,removed_lids):
     #Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
@@ -415,29 +416,31 @@ def allToAll(list,removed_lids):
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
     i = 0
     while i < len(list):
         result = analysis_multiple_zones(list[i], list, removed_lids)
-        db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_routes = " +
+        db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_no_routes = " +
                 str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
                 str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
                 str(list[i] ) + ";")
         i +=1
 
+    # Create layer for mean impairment
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
-    layer = QgsVectorLayer(uri.uri(), "result_all_to_all ", "postgres")
+
+    layer = QgsVectorLayer(uri.uri(), "mean_impairment ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
         ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean impairment: 1-20 % impairment', 0, 1.2, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment: 20-30 % impairment', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
-        ('Mean impairment: 30-50 % impairment', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
-        ('Mean impairment: 50-100 % impairment', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+        ('Mean impairment 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
+        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
+        ('Mean impairment 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
+        ('Mean impairment 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -451,6 +454,36 @@ def allToAll(list,removed_lids):
     ## create the renderer and assign it to a layer
     expression = 'mean_impairment'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+
+    # Create layer for nr_affected OD-pairs
+    sqlcall = "(select CASE WHEN nr_pairs > 0 THEN cast((nr_pairs - nr_non_affected) as float)/nr_pairs " \
+              "ELSE 100 END as prop_affected,* from emme_results)"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+
+    layer = QgsVectorLayer(uri.uri(), "prop_affected ", "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+    values = (
+        ('Not searched', 1, 100, QColor.fromRgb(255, 255, 255)),
+        ('0% affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
+        ('1-20% affected pairs', 0, 0.2, QColor.fromRgb(102, 255, 102)),
+        ('20-30% affected pairs', 0.2, 0.3, QColor.fromRgb(255, 255, 153)),
+        ('30-50% affected pairs', 0.3, 0.5, QColor.fromRgb(255, 178, 102)),
+        ('50-100% affected pairs', 0.5, 1, QColor.fromRgb(255, 102, 102)),
+    )
+
+    # create a category for each item in values
+    ranges = []
+    for label, lower, upper, color in values:
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol.setColor(QColor(color))
+        rng = QgsRendererRange(lower, upper, symbol, label)
+        ranges.append(rng)
+
+    ## create the renderer and assign it to a layer
+    expression = 'prop_affected'  # field name
+    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
@@ -504,7 +537,7 @@ def main():
         removed_lids = [83025, 84145]
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        allToAllResultTable(list,my,threshold)
+        #allToAllResultTable(list,my,threshold)
         allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
