@@ -5,8 +5,9 @@ from PyQt5.QtSql import *
 from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
-
 print(__name__)
+
+
 # Function definitions
 
 def TicTocGenerator():
@@ -18,18 +19,22 @@ def TicTocGenerator():
         tf = time.time()
         yield tf - ti  # returns the time difference
 
+
 def toc(tempBool=True):
     # Prints the time difference yielded by generator instance TicToc
     tempTimeInterval = next(TicToc)
     if tempBool:
         print("Elapsed time: %f seconds.\n" % tempTimeInterval)
 
+
 def tic():
     # Records a time in TicToc, marks the beginning of a time interval
     toc(False)
 
+
 # Initialize TicToc function.
 TicToc = TicTocGenerator()
+
 
 # Compare if to var1/var2 < t
 def comp(var1, var2, t):
@@ -38,14 +43,17 @@ def comp(var1, var2, t):
     else:
         return False
 
+
 # Remove all GIS-layers except those stated in the function.
 def removeRoutesLayers():
     layers = QgsProject.instance().mapLayers()
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
-                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table":
+                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
+            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table":
             QgsProject.instance().removeMapLayer(layer.id())
+
 
 # Give a zone id get a node id
 def genonenode(zone):
@@ -63,13 +71,14 @@ def genonenode(zone):
     # Saving SQL answer into matrix
     while query1.next():
         counter1 += 1
-       # print("node is :" + str(query1.value(0)))
+        # print("node is :" + str(query1.value(0)))
         node = query1.value(0)
 
     if counter1 != 1:
         raise Exception('No  node in Zones and startnode is:' + str(zone))
 
     return node
+
 
 # Generates a route set between two zone id:s.
 def routeSetGeneration(start_zone, end_zone, my, threshold):
@@ -81,11 +90,11 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     node.append(genonenode(end_zone))
     start = node[0]
     end = node[1]
-    print("Start zone is: "+str(start)+" End zone is: "+str(end))
+    print("Start node is: " + str(start) + " End node is: " + str(end))
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
-     link_cost AS cost, 3*link_cost AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
+     link_cost AS cost, 1000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
      INNER JOIN cost_table ON(edge = lid)")
 
     # Saving route 1 in query
@@ -93,7 +102,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     queries = []
     queries.append(temp_q)
     temp_q.next()
-    print("Funkade databasen eller? :"+str(temp_q.value(0)))
+    print("Funkade databasen eller? :" + str(temp_q.value(0)))
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
     db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
@@ -109,14 +118,16 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
     pen_q.next()
-    #print("Pencost för rutt: "+str(pen_q.value(0)))
+    # print("Pencost för rutt: "+str(pen_q.value(0)))
     pen_stop = pen_q.value(0)
 
-    ## Calculationg alternative routes
+    # Calculationg alternative routes
     i = 2
 
     nr_routes = 1
-    print(" Rätt värden? route_stop = "+str(route_stop) + " route1_cost = "+str(route1_cost) + " threshhold = "+str(threshold))
+    print(
+        " Rätt värden? route_stop = " + str(route_stop) + " route1_cost = " + str(route1_cost) + " threshhold = " + str(
+            threshold))
     while comp(route_stop, route1_cost, threshold):
         if pen_stop > 100000000:
             print("Warning: Pencost was over 1 billion")
@@ -126,18 +137,18 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         delta_query = db.exec_("Select COUNT(*) from result_table")
         delta_query.next()
         delta = delta_query.value(0)
-        #print("DELTA VALUE IS =:"+str(delta))
+        print("DELTA VALUE IS =:"+str(delta))
         # Parameter
 
         # Route 2
         db.exec_("DROP TABLE if exists temp_table2")
         db.exec_("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
         CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
-        FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 100000000 AS reverse_cost \
+        FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000 AS reverse_cost \
         FROM cost_table) AS subq LEFT JOIN \
-            (select lid as edge, max(cost) + (max(cost)/("+str(my)+" * min(cost)))*LN("+str(delta)+") AS cost \
+            (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(" + str(delta) + ") AS cost \
         from result_table group by lid ) AS pen ON \
-        (subq.id = pen.edge)',"+str(start)+","+str(end)+") INNER JOIN cost_table ON(edge = lid)")
+        (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
         # Saving route cost without penalty.
         temp_q = db.exec_("SELECT * FROM temp_table2 ORDER BY path_seq")
@@ -145,14 +156,14 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
-        #print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+        # print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
         route_stop = cost_q.value(0)
-        #print("difference is = " + str(route_stop / route1_cost))
+        # print("difference is = " + str(route_stop / route1_cost))
 
         # Saving route cost with penalty.
         pen_q = db.exec_("SELECT SUM(cost) from temp_table2")
         pen_q.next()
-        #print("Pencost för rutt: "+str(pen_q.value(0)))
+        # print("Pencost för rutt: "+str(pen_q.value(0)))
         pen_stop = pen_q.value(0)
 
         if comp(route_stop, route1_cost, threshold):
@@ -168,8 +179,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     db.exec_("INSERT INTO all_results SELECT * FROM result_table")
     return nr_routes
 
+
 # Generates result table for selected OD-pairs
-def selectedODResultTable(start_list, end_list,my,threshold,removed_lid):
+def selectedODResultTable(start_list, end_list, my, threshold, removed_lid):
     nr_routes = []
     db.exec_("DROP TABLE if exists all_results")
     db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
@@ -186,8 +198,9 @@ def selectedODResultTable(start_list, end_list,my,threshold,removed_lid):
     # Creates new visualisation layer for selected pairs
     print_selected_pairs(start_list, end_list, removed_lid)
 
+
 # Generates all to all result table
-def allToAllResultTable(list, my,threshold):
+def allToAllResultTable(list, my, threshold):
     nr_routes = []
     db.exec_("DROP TABLE if exists all_results")
     db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
@@ -196,11 +209,12 @@ def allToAllResultTable(list, my,threshold):
     end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
     speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
-    for y in range (len(list)):
+    for y in range(len(list)):
         for x in range(len(list)):
             # From and to same zone is not interesting
             if y != x:
                 nr_routes.append(routeSetGeneration(list[y], list[x], my, threshold))
+
 
 # Prints a route set based on whats in result_table.
 def printRoutes(nr_routes):
@@ -208,9 +222,10 @@ def printRoutes(nr_routes):
     while i <= nr_routes:
         sqlcall = "(SELECT * FROM result_table WHERE did=" + str(i) + ")"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
-        layert = QgsVectorLayer(uri.uri()," route " + str(i), "postgres")
+        layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
+
 
 # od_effect (start zone,end zone,LID of the removed link)
 # Function returns proportion of extra cost of alternative route in relation to opt route
@@ -219,36 +234,40 @@ def odEffect(start, end, lid):
     end_zone = end
     removed_lid = lid
 
-    #Finding best, non-affected alternative route
+    # Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
-                      " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                    " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  lid = "+str(removed_lid)+")")
+                      " start_zone = " + str(start_zone) + " AND end_zone = " + str(end_zone) + " AND "
+                                                                                                " did NOT IN (select did from all_results where start_zone = " + str(
+        start_zone) + " AND end_zone = " + str(end_zone) + " AND  lid = " + str(removed_lid) + ")")
     query1.next()
     id_alt = str(query1.value(0))
-    #print("id_alt är: "+ id_alt)
+    # print("id_alt är: "+ id_alt)
 
-    if id_alt== "NULL":
-        #Either there's only one route in the route set or the route set is empty
-        query = db.exec_("SELECT MIN(did) FROM all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+"")
+    if id_alt == "NULL":
+        # Either there's only one route in the route set or the route set is empty
+        query = db.exec_(
+            "SELECT MIN(did) FROM all_results where start_zone = " + str(start_zone) + " AND end_zone = " + str(
+                end_zone) + "")
         query.next()
 
-        if query.value(0) :
-            #There is no route that is not affected
+        if query.value(0):
+            # There is no route that is not affected
             return -1
         else:
-            #There is no routes with that start and end zone
+            # There is no routes with that start and end zone
             return -2;
 
-    elif  id_alt == "1":
-        #print("Zon påverkas inte")
+    elif id_alt == "1":
+        # print("Zon påverkas inte")
         return -3
     else:
-        #print("Zon påverkas och bästa id är:" + id_alt)
+        # print("Zon påverkas och bästa id är:" + id_alt)
 
         # Fetching cost of the optimal route and the alternative
         query2 = db.exec_("SELECT sum(link_cost) from all_results where "
-                          " (start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+") AND "
-                                        "(did = 1 OR did = "+str(id_alt)+") group by did")
+                          " (start_zone = " + str(start_zone) + " AND end_zone = " + str(end_zone) + ") AND "
+                                                                                                     "(did = 1 OR did = " + str(
+            id_alt) + ") group by did")
         query2.next()
         # Best cost
         cost_opt = str(query2.value(0))
@@ -259,11 +278,11 @@ def odEffect(start, end, lid):
 
         # Proportion of extra cost of alternative route in relation to opt route
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
-        return (float(cost_alt)/float(cost_opt))
+        return (float(cost_alt) / float(cost_opt))
+
 
 # Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
-def analysis_multiple_zones(start_node, end_list,lid):
-
+def analysis_multiple_zones(start_node, end_list, lid):
     count3 = 0
     count2 = 0
     count1 = 0
@@ -285,12 +304,13 @@ def analysis_multiple_zones(start_node, end_list,lid):
             sum_detour += result_test
         i = i + 1
 
-    mean_detour = sum_detour/count_detour
-    return [count3,count2,count1, mean_detour, i]
+    mean_detour = sum_detour / count_detour
+    return [count3, count2, count1, mean_detour, i]
+
 
 # Print route analysis for selected OD-pairs (no duplicate zones allowed)
-def print_selected_pairs(start_list, end_list,lid):
-    #Removes layers not specified in removeRoutesLayers
+def print_selected_pairs(start_list, end_list, lid):
+    # Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
 
     # first it creates neccessary db-tables for visualization of the OD-pairs in star_list and end_list
@@ -320,13 +340,10 @@ def print_selected_pairs(start_list, end_list,lid):
 
     db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
-
-
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
-    layer = QgsVectorLayer(uri.uri(), "result_impairment " , "postgres")
+    layer = QgsVectorLayer(uri.uri(), "result_impairment ", "postgres")
     QgsProject.instance().addMapLayer(layer)
-
 
     values = (
         ('Not affected', -3, -3, QColor.fromRgb(0, 0, 200)),
@@ -346,15 +363,16 @@ def print_selected_pairs(start_list, end_list,lid):
         ranges.append(rng)
 
     ## create the renderer and assign it to a layer
-    expression = 'alt_route_cost' # field name
+    expression = 'alt_route_cost'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
-    #iface.mapCanvas().refresh()
+    # iface.mapCanvas().refresh()
 
     # Print lines from od_lines
     sqlcall = "(SELECT * FROM od_lines )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
     layert = QgsVectorLayer(uri.uri(), " OD_pairs ", "postgres")
     QgsProject.instance().addMapLayer(layert)
+
 
 # Get a list with node_nr and zone_id.
 def getAllNodes():
@@ -372,7 +390,8 @@ def getAllNodes():
     while query.next():
         node_list.append(query.value(0))
 
-    return(node_list)
+    return (node_list)
+
 
 # Generate shortest path between one_node to all the other
 def onetoMany(one_node):
@@ -383,6 +402,62 @@ def onetoMany(one_node):
     end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
+
+
+# Generate route set using one to many with penalty currently not working correctly
+def onetoManyPenalty(one_node, many_nodes_list, my):
+    print("one to many with penalty")
+
+    print(str(one_node) + "  " + str(many_nodes_list))
+
+    # Route 1
+    db.exec_("DROP TABLE if exists dijk_temp_table1")
+    db.exec_("SELECT " + str(one_node) + " AS one_node,* INTO dijk_temp_table1 FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
+        end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
+        FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid \
+        WHERE start_node='" + str(many_nodes_list[0]) + "' or start_node='" + str(many_nodes_list[1]) + "' or \
+        start_node='" + str(many_nodes_list[2]) + "') ) \
+        INNER JOIN cost_table ON(edge = lid) ")
+
+    db.exec_("DROP TABLE if exists dijk_result_table")
+    db.exec_("SELECT 0 as delta, 1 AS did,* INTO \
+        dijk_result_table FROM dijk_temp_table1")
+    print("Route 1 inserted into dijk_result table!!")
+    # Route 1 FINISHED
+
+    # Route 2-X
+    i = 2
+
+    nr_routes = 1
+    while i < 5:
+
+        # Calculate delta an insert into the right penalty.
+        for x in many_nodes_list:
+            delta_query = db.exec_("Select COUNT(*) from dijk_result_table WHERE one_node ='" + str(one_node)
+                                   + "' and end_vid='" + str(x) + "'")
+            delta_query.next()
+            delta = delta_query.value(0)
+            print("delta value for " + str(x) + " is " + str(delta))
+            db.exec_("UPDATE dijk_result_table SET delta =" + str(delta) + " WHERE one_node='" + str(one_node)
+                     + "' and end_vid='" + str(x) + "' and did = "+str(i-1)+"")
+
+        db.exec_("DROP TABLE if exists dijk_temp_table2")
+        db.exec_("SELECT " + str(one_node) + " AS one_node,* INTO dijk_temp_table2 \
+        FROM pgr_dijkstra('SELECT id, source, target, CASE WHEN pen.cost IS NULL THEN subq.cost \
+        ELSE pen.cost END AS cost, reverse_cost FROM (SELECT lid AS id, start_node AS source, \
+        end_node AS target, link_cost AS cost, 100000 AS reverse_cost FROM cost_table) AS subq LEFT JOIN \
+        (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(delta) AS cost \
+        from dijk_result_table group by lid, end_vid, delta) AS pen ON \
+        (subq.id = pen.edge)'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid \
+        WHERE start_node='" + str(many_nodes_list[0]) + "' or start_node='" + str(many_nodes_list[1]) + "' or \
+        start_node='" + str(many_nodes_list[2]) + "') ) INNER JOIN cost_table ON(edge = lid)")
+
+        db.exec_("INSERT INTO dijk_result_table SELECT 0 AS delta, " + str(i) + " AS did,*  FROM dijk_temp_table2")
+        print("Route " + str(i) + " inserted into dijk_result table!!")
+        db.exec_("DROP TABLE if exists dijk_temp_table1")
+        db.exec_("SELECT * INTO dijk_temp_table1 from dijk_temp_table2")
+        i = i + 1
+        nr_routes = nr_routes + 1
 
 
 
@@ -406,52 +481,71 @@ if db.isValid():
     else:
         err = db.lastError()
         print(err.driverText())
+
+
 # DATABASE CONNECTION COMPLETE ---------------------------------------------
 
 def main():
-
     tic()
     removeRoutesLayers()
 
     if db.isValid():
-
         # Variable definitions
         my = 1
         threshold = 1.6
-        #___________________________________________________________________________________________________________________
+        # ___________________________________________________________________________________________________________________
 
         # __________________________________________________________________________________________________________________
-        #Start generating several route sets
+        # Start generating several route sets
 
         # List of OD-pairs
 
-        start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
-        removed_lid = 89227 #Götgatan
-        removed_lid = 83025  # Söderledstunneln
-        #allToAllResultTable(start_list,my,threshold)
-        selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        #___________________________________________________________________________________________________________________
+        # start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+        # end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
+        # removed_lid = 89227 #Götgatan
+        # removed_lid = 83025  # Söderledstunneln
+        # allToAllResultTable(start_list,my,threshold)
+        # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
+        # ___________________________________________________________________________________________________________________
 
         # Generating a single route set
 
-        # start_zone = 6785
-        # end_zone = 7405
+        # start_zone = 6904
+        # end_zone = 6776
         #
         # nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
         # printRoutes(nr_routes)
-        #
-        #
-        #
-        #
-        #___________________________________________________________________________________________________________________
 
+        # ___________________________________________________________________________________________________________________
+
+        # Generating all to all OBSERVERA TAR ca 1h att köra
+        # LAZY SOLUTION RIGHT HERE with table creating and deleting.
+        # db.exec_("DROP TABLE if exists dijk_all_results_mini")
+        # db.exec_("SELECT 12345 AS one_node,* INTO dijk_all_results_mini FROM pgr_Dijkstra('SELECT lid AS id, start_node AS source, \
+        #          end_node AS target, ST_length(geom)/speed*3.6 AS cost, 100000 AS reverse_cost \
+        #          FROM model_graph', 43912, \
+        #          ARRAY(SELECT start_node FROM od_lid WHERE NOT start_node='43838')) \
+        #          INNER JOIN cost_table ON(edge = lid) ")
+        # #db.exec_("ALTER TABLE dijk_all_results_mini ADD one_node")
+        #
+        # db.exec_("DELETE FROM dijk_all_results_mini")
+        #
+        # node_list = getAllNodes()
+        # print("storlek på lista"+str(len(node_list))+" något värde"+str(node_list[2]))
+        # for x in node_list:
+        #     onetoMany(x)
+        # for x in range(10):
+        # onetoMany(node_list[x])
+        #  print("nodes sent in: "+str(node_list[x]))
+
+        # Testar one to many with penalty
+        end_list = [genonenode(6837), genonenode(6776), genonenode(7553)]
+        start_zone = genonenode(6904)
+
+        onetoManyPenalty(start_zone, end_list, my)
 
         toc();
 
 
 if __name__ == "__main__" or __name__ == "__console__":
     main()
-
-
-
