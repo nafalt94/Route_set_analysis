@@ -90,7 +90,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     node.append(genonenode(end_zone))
     start = node[0]
     end = node[1]
-    print("Start node is: " + str(start) + " End node is: " + str(end))
+
+    #print("Start zone is: "+str(start)+" End zone is: "+str(end))
+
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
     db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
@@ -102,7 +104,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     queries = []
     queries.append(temp_q)
     temp_q.next()
-    print("Funkade databasen eller? :" + str(temp_q.value(0)))
+
+    #print("Funkade databasen eller? :"+str(temp_q.value(0)))
+
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
     db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
@@ -113,7 +117,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     cost_q.next()
     route1_cost = cost_q.value(0)
-    print("Current cost route 1: " + str(route1_cost))
+    #print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
     pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
@@ -125,12 +129,12 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     i = 2
 
     nr_routes = 1
-    print(
-        " Rätt värden? route_stop = " + str(route_stop) + " route1_cost = " + str(route1_cost) + " threshhold = " + str(
-            threshold))
+
+    #print(" Rätt värden? route_stop = "+str(route_stop) + " route1_cost = "+str(route1_cost) + " threshhold = "+str(threshold))
+
     while comp(route_stop, route1_cost, threshold):
         if pen_stop > 100000000:
-            print("Warning: Pencost was over 1 billion")
+            print("Warning: Pencost was over 1 billion for zone: " + str(start_zone) +" and end zone: " + str(end_zone))
             break
         # Calculating penalizing term (P. 14 in thesis work)
         # Delta value
@@ -214,6 +218,8 @@ def allToAllResultTable(list, my, threshold):
             # From and to same zone is not interesting
             if y != x:
                 nr_routes.append(routeSetGeneration(list[y], list[x], my, threshold))
+        progress = y/len(list)
+        #print("Patience! This is difficult, you know...  Progress:" + str(progress) + "%")
 
 
 # Prints a route set based on whats in result_table.
@@ -229,16 +235,24 @@ def printRoutes(nr_routes):
 
 # od_effect (start zone,end zone,LID of the removed link)
 # Function returns proportion of extra cost of alternative route in relation to opt route
-def odEffect(start, end, lid):
+def odEffect(start, end, lids):
     start_zone = start
     end_zone = end
-    removed_lid = lid
+
+    removed_lid_string = "( lid = " + str(lids[0])
+    i = 1
+    while i < len(lids):
+        removed_lid_string += " or lid =" + str(lids[i])
+        i += 1
+    removed_lid_string += ")"
+
 
     # Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
-                      " start_zone = " + str(start_zone) + " AND end_zone = " + str(end_zone) + " AND "
-                                                                                                " did NOT IN (select did from all_results where start_zone = " + str(
-        start_zone) + " AND end_zone = " + str(end_zone) + " AND  lid = " + str(removed_lid) + ")")
+
+                      " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
+                    " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
+
     query1.next()
     id_alt = str(query1.value(0))
     # print("id_alt är: "+ id_alt)
@@ -290,22 +304,26 @@ def analysis_multiple_zones(start_node, end_list, lid):
     sum_detour = 0
 
     i = 0
-    while i < len(end_list):
-        result_test = odEffect(start_node, end_list[i], lid)
+    while i < len(list):
+        if start_node != list[i]:
+            result_test = odEffect(start_node, list[i], lids)
 
-        if result_test == -3:
-            count3 += 1
-        elif result_test == -2:
-            count2 += 1
-        elif result_test == -1:
-            count1 += 1
-        else:
-            count_detour += 1
-            sum_detour += result_test
+            if result_test == -3:
+                count3 += 1
+            elif result_test == -2:
+                count2 += 1
+            elif result_test == -1:
+                count1 += 1
+            else:
+                count_detour += 1
+                sum_detour += result_test
         i = i + 1
 
-    mean_detour = sum_detour / count_detour
-    return [count3, count2, count1, mean_detour, i]
+        if count_detour != 0:
+            mean_detour = sum_detour/count_detour
+        else:
+            mean_detour = -1
+    return [count3,count2,count1, mean_detour, i-1]
 
 
 # Print route analysis for selected OD-pairs (no duplicate zones allowed)
@@ -336,7 +354,7 @@ def print_selected_pairs(start_list, end_list, lid):
                                                                                                                     " OR id = '" + str(
                 end_list[i]) + "';")
 
-        i = i + 1
+        i += 1
 
     db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
@@ -403,6 +421,65 @@ def onetoMany(one_node):
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
+def allToAll(list,removed_lids):
+    #Removes layers not specified in removeRoutesLayers
+    removeRoutesLayers()
+
+    removed_lid_string = "( lid = " + str(removed_lids[0])
+    i=1
+    while i < len(removed_lids):
+        removed_lid_string += " or lid =" + str(removed_lids[i])
+        i +=1
+    removed_lid_string += ")"
+
+    # Queryn skapar tabell för alla länkar som går igenom removed_lid
+    db.exec_("DROP TABLE IF EXIST temp_test")
+    db.exec_(
+        " select * into temp_test from all_results f where exists(select 1 from all_results l where " + removed_lid_string + " and"
+                                                                                                                             " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
+
+    # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
+    # Create emme_result table
+    db.exec_("DROP table if exists emme_results")
+    db.exec_(
+        "SELECT 0 as nr_non_affected, 0 as nr_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+
+    i = 0
+    while i < len(list):
+        result = analysis_multiple_zones(list[i], list, removed_lids)
+        db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) + " , nr_routes = " +
+                 str(result[1]) + " , nr_all_routes_affected = " + str(result[2]) + " , mean_impairment = " +
+                 str(result[3]) + " , nr_pairs = " + str(result[4]) + " WHERE id = " +
+                 str(list[i]) + ";")
+        i += 1
+
+    sqlcall = "(SELECT * FROM emme_results)"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+    layer = QgsVectorLayer(uri.uri(), "result_all_to_all ", "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+    values = (
+        ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
+        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean impairment: 1-20 % impairment', 0, 1.2, QColor.fromRgb(102, 255, 102)),
+        ('Mean impairment: 20-30 % impairment', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
+        ('Mean impairment: 30-50 % impairment', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
+        ('Mean impairment: 50-100 % impairment', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+    )
+
+    # create a category for each item in values
+    ranges = []
+    for label, lower, upper, color in values:
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol.setColor(QColor(color))
+        rng = QgsRendererRange(lower, upper, symbol, label)
+        ranges.append(rng)
+
+    ## create the renderer and assign it to a layer
+    expression = 'mean_impairment'  # field name
+    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+
+
 
 # Generate route set using one to many with penalty currently not working correctly
 def onetoManyPenalty(one_node, many_nodes_list, my):
@@ -461,6 +538,7 @@ def onetoManyPenalty(one_node, many_nodes_list, my):
 
 
 
+
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
 # set host name, port, database name, username and password
@@ -496,17 +574,27 @@ def main():
         # ___________________________________________________________________________________________________________________
 
         # __________________________________________________________________________________________________________________
-        # Start generating several route sets
+
+        #Start generating several route sets
 
         # List of OD-pairs
 
-        # start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
-        # end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
-        # removed_lid = 89227 #Götgatan
-        # removed_lid = 83025  # Söderledstunneln
-        # allToAllResultTable(start_list,my,threshold)
+
+        start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
+        end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
+        list = [6904, 6884, 6837, 6776, 7835, 7864, 7967, 6955,7570,7422,
+                7680,7557,7560,6879,6816, 7630,7162,7187,7227,7302]
+        #list = [6904, 6884, 6837]
+        removed_lid = 89227  # Götgatan
+        removed_lid = 83025  # Söderledstunneln
+        # [81488, 83171] för Essingeleden
+        # [83025, 84145] för Söderleden
+        removed_lids = [83025, 84145]
+
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        # ___________________________________________________________________________________________________________________
+        allToAllResultTable(list,my,threshold)
+        allToAll(list, removed_lids)
+        #___________________________________________________________________________________________________________________
 
         # Generating a single route set
 
