@@ -249,7 +249,6 @@ def odEffect(start, end, lids):
 
     # Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
-
                       " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
                     " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
 
@@ -327,7 +326,7 @@ def analysis_multiple_zones(start_node, list, lids):
 
 
 # Print route analysis for selected OD-pairs (no duplicate zones allowed)
-def print_selected_pairs(start_list, end_list, lid):
+def print_selected_pairs(start_list, end_list, lids):
     # Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
 
@@ -347,7 +346,7 @@ def print_selected_pairs(start_list, end_list, lid):
             db.exec_("INSERT INTO OD_lines(geom) SELECT ST_MakeLine(ST_Centroid(geom) ORDER BY id) "
                      "AS geom FROM emme_zones where id = " + str(start_list[i]) + " OR id = " + str(end_list[i]) + "")
 
-        result_test = odEffect(start_list[i], end_list[i], lid)
+        result_test = odEffect(start_list[i], end_list[i], lids)
         print("Result of " + str(i) + " is: " + str(result_test))
         db.exec_(
             "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(start_list[i]) + "'"
@@ -437,13 +436,12 @@ def allToAll(list,removed_lids):
     db.exec_("DROP TABLE IF EXIST temp_test")
     db.exec_(
         " select * into temp_test from all_results f where exists(select 1 from all_results l where " + removed_lid_string + " and"
-                                                                                                                             " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
+                                 " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
 
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
     db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
-
 
     i = 0
     while i < len(list):
@@ -454,8 +452,7 @@ def allToAll(list,removed_lids):
                 str(list[i] ) + ";")
         i +=1
 
-
-    # Create layer for mean impairment
+    ############################ Create layer for mean impairment
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
@@ -483,7 +480,7 @@ def allToAll(list,removed_lids):
     expression = 'mean_impairment'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
-    # Create layer for nr_affected OD-pairs
+    ############################ Create layer for nr_affected OD-pairs
     sqlcall = "(select CASE WHEN nr_pairs > 0 THEN cast((nr_pairs - nr_non_affected) as float)/nr_pairs " \
               "ELSE 100 END as prop_affected,* from emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
@@ -512,6 +509,27 @@ def allToAll(list,removed_lids):
     expression = 'prop_affected'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
+    ############################ Create OD-lines between all afected OD-pairs
+
+    db.exec_("drop table if exists temp_od_lines")
+    db.exec_("SELECT all_results.start_zone, all_results.end_zone, geom as start_geom "
+             "into temp_od_lines from emme_zones join(SELECT start_zone, end_zone from all_results f "
+             "where exists(select 1 from all_results l where "+removed_lid_string+" and (f.start_zone = l.start_zone "
+             "and f.end_zone = l.end_zone and f.did = l.did)) and did = 1 group by start_zone, end_zone) as all_results "
+             " ON all_results.start_zone = emme_zones.id")
+
+    db.exec_("drop table if exists all_to_all_od_lines")
+    db.exec_("select temp_od_lines.start_zone, temp_od_lines.end_zone, temp_od_lines.start_geom  "
+             ", emme_zones.geom as end_geom,ST_MakeLine(ST_Centroid(start_geom), ST_Centroid(emme_zones.geom)) "
+             "as geom into all_to_all_od_lines from temp_od_lines join emme_zones on temp_od_lines.end_zone = emme_zones.id")
+    db.exec_("ALTER TABLE all_to_all_od_lines ADD COLUMN id SERIAL PRIMARY KEY;")
+
+
+    sqlcall = "(select * from all_to_all_od_lines)"
+
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+    layer = QgsVectorLayer(uri.uri(), " all_to_all_od_lines", "postgres")
+    QgsProject.instance().addMapLayer(layer)
 
 # Generate route set using one to many with penalty currently not working correctly
 def onetoManyPenalty(one_node, many_nodes_list, my):
@@ -612,9 +630,8 @@ def main():
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
-        list = [6904, 6884, 6837, 6776, 7835, 7864, 7967, 6955,7570,7422,
-                7680,7557,7560,6879,6816, 7630,7162,7187,7227,7302]
-        list = [6904, 6884, 6837]
+        list = [6904, 6884, 6837, 6776, 7835, 7864, 7967, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
+        #list = [6904, 6884, 6837, 6776, 7835]
         removed_lid = 89227  # Götgatan
         removed_lid = 83025  # Söderledstunneln
         # [81488, 83171] för Essingeleden
@@ -622,7 +639,7 @@ def main():
         removed_lids = [83025, 84145]
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        allToAllResultTable(list,my,threshold)
+        #allToAllResultTable(list,my,threshold)
         allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
