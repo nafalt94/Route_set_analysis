@@ -516,11 +516,23 @@ def allToAll(list,removed_lids):
              "as geom into all_to_all_od_lines from temp_od_lines join emme_zones on temp_od_lines.end_zone = emme_zones.id")
     db.exec_("ALTER TABLE all_to_all_od_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
-
     sqlcall = "(select * from all_to_all_od_lines)"
 
     uri.setDataSource("", sqlcall, "geom", "", "id")
     layer = QgsVectorLayer(uri.uri(), " all_to_all_od_lines", "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+    ############################ All affected routes (tree)
+    db.exec_("drop table if exists temp_affected_links")
+    db.exec_("CREATE TABLE temp_affected_links (ID int NOT NULL PRIMARY KEY, geom geometry NOT NULL, count bigint);")
+    db.exec_("insert into temp_affected_links select id, geom, count(id)  from all_results f where  exists ("
+             "select 1 from all_results l where "+removed_lid_string+" and (f.start_zone = l.start_zone "
+             "and f.end_zone = l.end_zone and f.did = l.did)) and did = 1 GROUP by id,geom")
+
+    sqlcall = "(select * from temp_affected_links)"
+
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+    layer = QgsVectorLayer(uri.uri(), " affected_links", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
 # Generate route set using one to many with penalty currently not working correctly
@@ -628,7 +640,7 @@ def main():
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
-        list = [6904, 6884, 6837, 6776, 7835, 7864, 7967, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
+        list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
         #list = [6904, 6884, 6837, 6776, 7835]
         removed_lid = 89227  # Götgatan
         removed_lid = 83025  # Söderledstunneln
@@ -638,7 +650,7 @@ def main():
         removed_lids = [83025, 84145]
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        #allToAllResultTable(list,my,threshold)
+        allToAllResultTable(list,my,threshold)
         allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
