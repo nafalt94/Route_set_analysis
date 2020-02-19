@@ -82,16 +82,14 @@ def genonenode(zone):
 
 # Generates a route set between two zone id:s.
 def routeSetGeneration(start_zone, end_zone, my, threshold):
-    #
+
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
 
-    node = [genonenode(start_zone)]
-    node.append(genonenode(end_zone))
-    start = node[0]
-    end = node[1]
+    start = genonenode(start_zone)
+    end = genonenode(end_zone)
 
-    #print("Start zone is: "+str(start)+" End zone is: "+str(end))
+    #print("Start node is: "+str(start)+" End node is: "+str(end))
 
     db.exec_("DROP TABLE if exists temp_table1")
     # Route 1
@@ -99,43 +97,36 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
      link_cost AS cost, 1000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
      INNER JOIN cost_table ON(edge = lid)")
 
-    # Saving route 1 in query
-    temp_q = db.exec_("SELECT * FROM temp_table1 ORDER BY path_seq")
-    queries = []
-    queries.append(temp_q)
-    temp_q.next()
-
-    #print("Funkade databasen eller? :"+str(temp_q.value(0)))
 
     # Result table creating
     db.exec_("DROP TABLE if exists result_table")
     db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
     result_table FROM temp_table1")
 
-    # Getting the agg. cost for best route
+    # Getting total cost for route 1 and setting first stop criterion.
     cost_q = db.exec_("SELECT sum(link_cost) FROM temp_table1")
-
     cost_q.next()
     route1_cost = cost_q.value(0)
     #print("Current cost route 1: " + str(route1_cost))
-    route_stop = route1_cost
+    #route_stop = route1_cost
 
-    pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
-    pen_q.next()
-    # print("Pencost för rutt: "+str(pen_q.value(0)))
-    pen_stop = pen_q.value(0)
+    # # Pen cost as breaking if stuck instead of nr_routes
+    # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
+    # pen_q.next()
+    # # print("Pencost för rutt: "+str(pen_q.value(0)))
+    # pen_stop = pen_q.value(0)
 
     # Calculationg alternative routes
     i = 2
-
     nr_routes = 1
 
-    #print(" Rätt värden? route_stop = "+str(route_stop) + " route1_cost = "+str(route1_cost) + " threshhold = "+str(threshold))
-
-    while comp(route_stop, route1_cost, threshold):
-        if pen_stop > 100000000:
-            print("Warning: Pencost was over 1 billion for zone: " + str(start_zone) +" and end zone: " + str(end_zone))
+    # while comp(route_stop, route1_cost, threshold):
+    while True:
+        if nr_routes >= 10:
+            print("Warning: The number of routes was over 10 for start zone: \
+             " + str(start_zone) + " and end zone: " + str(end_zone))
             break
+
         # Calculating penalizing term (P. 14 in thesis work)
         # Delta value
         delta_query = db.exec_("Select COUNT(*) from result_table")
@@ -154,21 +145,20 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         from result_table group by lid ) AS pen ON \
         (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
-        # Saving route cost without penalty.
-        temp_q = db.exec_("SELECT * FROM temp_table2 ORDER BY path_seq")
-        queries.append(temp_q)
+        # Saving route cost without penalty and updating route_stop.
         cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
-        # print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
         route_stop = cost_q.value(0)
+        # print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+
         # print("difference is = " + str(route_stop / route1_cost))
 
-        # Saving route cost with penalty.
-        pen_q = db.exec_("SELECT SUM(cost) from temp_table2")
-        pen_q.next()
-        # print("Pencost för rutt: "+str(pen_q.value(0)))
-        pen_stop = pen_q.value(0)
+        # Saving route cost with penalty. Remove comment if  penalty want to be used as breaking criterion
+        # pen_q = db.exec_("SELECT SUM(cost) from temp_table2")
+        # pen_q.next()
+        # # print("Pencost för rutt: "+str(pen_q.value(0)))
+        # pen_stop = pen_q.value(0)
 
         if comp(route_stop, route1_cost, threshold):
             db.exec_("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(
@@ -179,6 +169,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
             db.exec_("SELECT * INTO temp_table1 from temp_table2")
             i = i + 1
             nr_routes = nr_routes + 1
+        else:
+            break
 
     db.exec_("INSERT INTO all_results SELECT * FROM result_table")
     return nr_routes
@@ -586,6 +578,12 @@ def onetoManyPenalty(one_node, many_nodes_list, my):
         i = i + 1
         nr_routes = nr_routes + 1
 
+def kshortest(start_zone, end_zone, nr):
+    db.exec_("DROP TABLE if exists kshort")
+    # Route 1
+    db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
+        link_cost AS cost, 1000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
+        INNER JOIN cost_table ON(edge = lid)")
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
@@ -634,6 +632,7 @@ def main():
         #list = [6904, 6884, 6837, 6776, 7835]
         removed_lid = 89227  # Götgatan
         removed_lid = 83025  # Söderledstunneln
+
         # [81488, 83171] för Essingeleden
         # [83025, 84145] för Söderleden
         removed_lids = [83025, 84145]
@@ -674,10 +673,10 @@ def main():
         #  print("nodes sent in: "+str(node_list[x]))
 
         # Testar one to many with penalty
-        end_list = [genonenode(6837), genonenode(6776), genonenode(7553)]
-        start_zone = genonenode(6904)
-
-        #onetoManyPenalty(start_zone, end_list, my)
+        # end_list = [genonenode(6837), genonenode(6776), genonenode(7553)]
+        # start_zone = genonenode(6904)
+        #
+        # onetoManyPenalty(start_zone, end_list, my)
 
         toc();
 
