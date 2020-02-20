@@ -176,11 +176,11 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
                 end_zone) + " AS end_zone, " + str(
                 i) + " AS did,*  FROM temp_table2")
             # Coverage calculation here.
-            testa = db.exec_("SELECT cast(count(*) as float) / (SELECT COUNT(*) FROM result_table WHERE did="+str(i)+") AS per \
-            FROM (SELECT did,lid FROM result_table WHERE did="+str(i)+" and lid = ANY(SELECT lid FROM result_table \
-            WHERE NOT did >= "+str(i)+") group by lid,did) as foo")
+            testa = db.exec_("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM result_table WHERE did="+str(i)+") AS per \
+            FROM (SELECT did,lid,geom FROM result_table WHERE did="+str(i)+" and lid = ANY(SELECT lid FROM result_table \
+            WHERE NOT did >= "+str(i)+") group by lid,did,geom) as foo")
             testa.next()
-            print("rutt " + str(i) + " " + str(testa.value(0)) + " länkar överlappar!")
+            print("rutt " + str(i) + " " + str(testa.value(0)) + " länk-km överlappar!")
 
             db.exec_("DROP TABLE if exists temp_table1")
             db.exec_("SELECT * INTO temp_table1 from temp_table2")
@@ -730,7 +730,7 @@ def main():
 
     if db.isValid():
         # Variable definitions
-        my = 0.3
+        my = 0.1
         threshold = 1.6
         # ___________________________________________________________________________________________________________________
 
@@ -765,8 +765,24 @@ def main():
             link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
             end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
             speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
-        start_zone = 7277
-        end_zone = 7680
+
+        #Södertälje - Bo (Nacka)
+        # start_zone = 7472
+        # end_zone = 7556
+
+        #Hägersten - Bo
+        # start_zone = 6960
+        # end_zone = 7556
+
+        # Sydost --> Norr om Stockholm
+        start_zone = 7815
+        end_zone = 7635
+
+        # Rågsved --> Norr om Stockholm
+        start_zone = 6878
+        end_zone = 7635
+
+
 
 
         nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
