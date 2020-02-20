@@ -85,6 +85,11 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
+    db.exec_("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
@@ -650,17 +655,22 @@ def main():
         removed_lids = [83025, 84145]
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        allToAllResultTable(list,my,threshold)
-        allToAll(list, removed_lids)
+        # allToAllResultTable(list,my,threshold)
+        # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
+        db.exec_("DROP TABLE if exists all_results")
+        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+            node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+            link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+            end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+            speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+        start_zone = 7277
+        end_zone = 7680
 
-        # start_zone = 6904
-        # end_zone = 6776
-        #
-        # nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
-        # printRoutes(nr_routes)
+        nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
+        printRoutes(nr_routes)
 
         # ___________________________________________________________________________________________________________________
 
