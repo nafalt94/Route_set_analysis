@@ -4,8 +4,7 @@
 # Imports
 import time
 import psycopg2
-import logging
-import sys
+
 
 
 print(__name__)
@@ -13,52 +12,7 @@ print(__name__)
 
 # Function definitions
 
-class Database:
-    """PostgreSQL Database class."""
 
-    def open_connection(self):
-        """Connect to a Postgres database."""
-        try:
-            if (self.conn is None):
-                self.conn = psycopg2.connect(host=self.localhost,
-                                             user=self.username,
-                                             password=self.password,
-                                             port=self.port,
-                                             dbname=self.dbname)
-        except psycopg2.DatabaseError as e:
-            logging.error(e)
-            sys.exit()
-        finally:
-            logging.info('Connection opened successfully.')
-
-
-    def run_query(self, query):
-    	"""Run a SQL query."""
-
-
-        try:
-            self.open_connection()
-            with self.conn.cursor() as cur:
-                if 'SELECT' in query:
-                    records = []
-                    cur.execute(query)
-                    result = cur.fetchall()
-                    for row in result:
-                        records.append(row)
-                    cur.close()
-                    return records
-                else:
-                    result = cur.execute(query)
-                    self.conn.commit()
-                    affected = f"{cur.rowcount} rows affected."
-                    cur.close()
-                    return affected
-        except psycopg2.DatabaseError as e:
-            print(e)
-        finally:
-            if self.conn:
-                self.conn.close()
-                logging.info('Database connection closed.')
 
 def TicTocGenerator():
     # Generator that returns time differences
@@ -94,7 +48,7 @@ def comp(var1, var2, t):
         return False
 
 def genonenode(zone):
-    db.exec_("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
+    cur.execute("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
                 ORDER BY id, distance) AS score, id, lid, start_node, distance \
                 FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
                 distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
@@ -102,17 +56,24 @@ def genonenode(zone):
                 WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
                 WHERE score = 1)")
 
-    query1 = db.exec_("SELECT start_node FROM od_lid WHERE id=" + str(zone))
-    counter1 = 0
 
-    # Saving SQL answer into matrix
-    while query1.next():
-        counter1 += 1
-        # print("node is :" + str(query1.value(0)))
-        node = query1.value(0)
 
-    if counter1 != 1:
-        raise Exception('No  node in Zones and startnode is:' + str(zone))
+    cur.execute("SELECT start_node FROM od_lid WHERE id=" + str(zone))
+    result = cur.fetchone()
+    print("THE NODE" + str(result[0]))
+    if result is not None:
+        node = result[0]
+    else:
+        raise Exception('No node in zones:' + str(zone))
+
+    # # Saving SQL answer into matrix
+    # while query1.next():
+    #     counter1 += 1
+    #     # print("node is :" + str(query1.value(0)))
+    #     node = query1.value(0)
+    #
+    # if counter1 != 1:
+    #     raise Exception('No  node in Zones and startnode is:' + str(zone))
 
     return node
 
@@ -218,29 +179,31 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     print("all results inserted")
     return nr_routes
 
+# Connection global to be used everywhere.
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123")
+cur = conn.cursor()
+
 def main():
-    db = MyDatabase()
-    dummy = db.cursor()
 
-    print(str(test))
+    cur.execute("SELECT * FROM od_lid limit 10")
+    print("FETCHED"+str(cur.fetchall()))
 
+    print("GENNODE::"+str(genonenode(7950)))
 
-
-
-    print("DB RETURNED: "+dummy.fetchone())
     # Variable definitions
     my = 0.3
     threshold = 1.6
-    print("my="+str(my)+" and threshold="+str(threshold))
+
 # ___________________________________________________________________________________________________________________
 
 # __________________________________________________________________________________________________________________
 
 
-
+    #Close connection and cursor
 
 if __name__ == "__main__" or __name__ == "__console__":
     main()
 
-
+cur.close()
+conn.close()
 toc();
