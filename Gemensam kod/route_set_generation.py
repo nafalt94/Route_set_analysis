@@ -51,7 +51,7 @@ def removeRoutesLayers():
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
-            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table":
+            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid":
             QgsProject.instance().removeMapLayer(layer.id())
 
 
@@ -85,6 +85,12 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
+
+    db.exec_("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
@@ -164,6 +170,12 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
             db.exec_("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(
                 end_zone) + " AS end_zone, " + str(
                 i) + " AS did,*  FROM temp_table2")
+            # Coverage calculation here.
+            testa = db.exec_("SELECT cast(count(*) as float) / (SELECT COUNT(*) FROM result_table WHERE did="+str(i)+") AS per \
+            FROM (SELECT did,lid FROM result_table WHERE did="+str(i)+" and lid = ANY(SELECT lid FROM result_table \
+            WHERE NOT did >= "+str(i)+") group by lid,did) as foo")
+            testa.next()
+            print("rutt " + str(i) + " " + str(testa.value(0)) + " länkar överlappar!")
 
             db.exec_("DROP TABLE if exists temp_table1")
             db.exec_("SELECT * INTO temp_table1 from temp_table2")
@@ -173,6 +185,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
             break
 
     db.exec_("INSERT INTO all_results SELECT * FROM result_table")
+    print("all results inserted")
     return nr_routes
 
 
@@ -398,7 +411,7 @@ def getAllNodes():
     node_list = []
     # Saving SQL answer into matrix
     while query.next():
-        node_list.append(query.value(0))
+        node_list.append(query.value(1))
 
     return (node_list)
 
@@ -429,6 +442,96 @@ def allToAll(list,removed_lids):
     db.exec_("DROP TABLE IF EXIST temp_test")
     db.exec_(
         " select * into temp_test from all_results f where exists(select 1 from all_results l where " + removed_lid_string + " and"
+                                                                                                                             " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
+
+    # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
+    # Create emme_result table
+    db.exec_("DROP table if exists emme_results")
+    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+
+
+    i = 0
+    while i < len(list):
+        result = analysis_multiple_zones(list[i], list, removed_lids)
+        db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_no_routes = " +
+                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
+                str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
+                str(list[i] ) + ";")
+        i +=1
+
+
+    # Create layer for mean impairment
+    sqlcall = "(SELECT * FROM emme_results)"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+
+    layer = QgsVectorLayer(uri.uri(), "mean_impairment ", "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+    values = (
+        ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
+        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean impairment 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
+        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
+        ('Mean impairment 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
+        ('Mean impairment 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+    )
+
+    # create a category for each item in values
+    ranges = []
+    for label, lower, upper, color in values:
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol.setColor(QColor(color))
+        rng = QgsRendererRange(lower, upper, symbol, label)
+        ranges.append(rng)
+
+    ## create the renderer and assign it to a layer
+    expression = 'mean_impairment'  # field name
+    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+
+    # Create layer for nr_affected OD-pairs
+    sqlcall = "(select CASE WHEN nr_pairs > 0 THEN cast((nr_pairs - nr_non_affected) as float)/nr_pairs " \
+              "ELSE 100 END as prop_affected,* from emme_results)"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+
+    layer = QgsVectorLayer(uri.uri(), "prop_affected ", "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+    values = (
+        ('Not searched', 1, 100, QColor.fromRgb(255, 255, 255)),
+        ('0% affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
+        ('1-20% affected pairs', 0, 0.2, QColor.fromRgb(102, 255, 102)),
+        ('20-30% affected pairs', 0.2, 0.3, QColor.fromRgb(255, 255, 153)),
+        ('30-50% affected pairs', 0.3, 0.5, QColor.fromRgb(255, 178, 102)),
+        ('50-100% affected pairs', 0.5, 1, QColor.fromRgb(255, 102, 102)),
+    )
+
+    # create a category for each item in values
+    ranges = []
+    for label, lower, upper, color in values:
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol.setColor(QColor(color))
+        rng = QgsRendererRange(lower, upper, symbol, label)
+        ranges.append(rng)
+
+    ## create the renderer and assign it to a layer
+    expression = 'prop_affected'  # field name
+    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+
+def allToAllBigTest(list,removed_lids):
+    #Removes layers not specified in removeRoutesLayers
+    removeRoutesLayers()
+
+    removed_lid_string = "( lid = " + str(removed_lids[0])
+    i=1
+    while i < len(removed_lids):
+        removed_lid_string += " or lid =" + str(removed_lids[i])
+        i +=1
+    removed_lid_string += ")"
+
+    # Queryn skapar tabell för alla länkar som går igenom removed_lid
+    db.exec_("DROP TABLE IF EXIST temp_test")
+    db.exec_(
+        " select * into temp_test from dijk_all_results_mini f where exists(select 1 from dijk_all_results_mini l where " + removed_lid_string + " and"
                                                                                                                              " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
 
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
@@ -560,12 +663,6 @@ def onetoManyPenalty(one_node, many_nodes_list, my):
         i = i + 1
         nr_routes = nr_routes + 1
 
-def kshortest(start_zone, end_zone, nr):
-    db.exec_("DROP TABLE if exists kshort")
-    # Route 1
-    db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
-        link_cost AS cost, 1000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
-        INNER JOIN cost_table ON(edge = lid)")
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
@@ -597,7 +694,7 @@ def main():
 
     if db.isValid():
         # Variable definitions
-        my = 1
+        my = 0.3
         threshold = 1.6
         # ___________________________________________________________________________________________________________________
 
@@ -617,20 +714,20 @@ def main():
         # removed_lid = 83025  # Söderledstunneln
         # [81488, 83171] för Essingeleden
         # [83025, 84145] för Söderleden
-        removed_lids = [83025, 84145]
+        # removed_lids = [83025, 84145]
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        allToAllResultTable(list,my,threshold)
-        allToAll(list, removed_lids)
+        # allToAllResultTable(list,my,threshold)
+        # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
 
-        # start_zone = 6904
-        # end_zone = 6776
-        #
-        # nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
-        # printRoutes(nr_routes)
+        start_zone = 7161
+        end_zone = 7842
+
+        nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
+        printRoutes(nr_routes)
 
         # ___________________________________________________________________________________________________________________
 
@@ -659,6 +756,10 @@ def main():
         # start_zone = genonenode(6904)
         #
         # onetoManyPenalty(start_zone, end_list, my)
+        # removed_lids = [89227]
+        # listan = getAllNodes()
+        #print("lsitan är:"+ str(listan))
+        # allToAllBigTest(listan, removed_lids)
 
         toc();
 
