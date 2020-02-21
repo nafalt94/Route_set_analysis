@@ -180,7 +180,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
             FROM (SELECT did,lid,geom FROM result_table WHERE did="+str(i)+" and lid = ANY(SELECT lid FROM result_table \
             WHERE NOT did >= "+str(i)+") group by lid,did,geom) as foo")
             testa.next()
-            print("rutt " + str(i) + " " + str(testa.value(0)) + " länk-km överlappar!")
+            #print("rutt " + str(i) + " " + str(testa.value(0)) + " länk-km överlappar!")
 
             db.exec_("DROP TABLE if exists temp_table1")
             db.exec_("SELECT * INTO temp_table1 from temp_table2")
@@ -190,7 +190,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
             break
 
     db.exec_("INSERT INTO all_results SELECT * FROM result_table")
-    print("all results inserted")
+    #print("all results inserted")
     return nr_routes
 
 
@@ -205,7 +205,7 @@ def selectedODResultTable(start_list, end_list, my, threshold, removed_lid):
     speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
     for x in range(len(end_list)):
-        print("Generating start zone = " + str(start_list[x]) + " end zone= " + str(end_list[x]))
+        #print("Generating start zone = " + str(start_list[x]) + " end zone= " + str(end_list[x]))
 
         nr_routes.append(routeSetGeneration(start_list[x], end_list[x], my, threshold))
 
@@ -357,7 +357,7 @@ def print_selected_pairs(start_list, end_list, lids):
                      "AS geom FROM emme_zones where id = " + str(start_list[i]) + " OR id = " + str(end_list[i]) + "")
 
         result_test = odEffect(start_list[i], end_list[i], lids)
-        print("Result of " + str(i) + " is: " + str(result_test))
+        #print("Result of " + str(i) + " is: " + str(result_test))
         db.exec_(
             "UPDATE emme_results SET alt_route_cost = " + str(result_test) + " WHERE id = '" + str(start_list[i]) + "'"
                                                                                                                     " OR id = '" + str(
@@ -373,7 +373,7 @@ def print_selected_pairs(start_list, end_list, lids):
     QgsProject.instance().addMapLayer(layer)
 
     values = (
-        ('Not affected', -3, -3, QColor.fromRgb(0, 0, 200)),
+        ('Not affected', -3, -3, QColor.fromRgb(153, 204, 255)),
         ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
         ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
@@ -699,6 +699,143 @@ def onetoManyPenalty(one_node, many_nodes_list, my):
         i = i + 1
         nr_routes = nr_routes + 1
 
+#Returns prop. of extra link IDs in my2 compared to my1
+def ODpairwiseMyTest(start_zone,end_zone,threshold, my1,my2):
+
+    routeSetGeneration(start_zone, end_zone, my1, threshold)
+    db.exec_("drop table if exists temp")
+    db.exec_("select * into temp from all_results")
+    db.exec_("drop table all_results")
+    routeSetGeneration(start_zone, end_zone, my2, threshold)
+
+    #Number of links not existing for my2
+    nr_unique = db.exec_("SELECT COUNT(*) FROM all_results t1 LEFT JOIN temp t2 ON t1.lid = t2.lid WHERE t2.lid IS NULL ")
+    nr_unique.next()
+    #Tot number of links existing for my2
+    nr_tot = db.exec_("select COUNT(*) from all_results")
+    nr_tot.next()
+
+    prop = nr_unique.value(0)/nr_tot.value(0)
+    print("Proportion extra links: " + str(prop))
+
+#Similar to routeSetGeneration, reuturns overlap
+def overlapForMy(start_zone, end_zone, my, threshold):
+
+    db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
+        from model_graph)")
+    db.exec_("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+            node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+            link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+            end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+            speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+    db.exec_("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+            node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+            link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+            end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+            speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+
+    start = genonenode(start_zone)
+    end = genonenode(end_zone)
+
+    # print("Start node is: "+str(start)+" End node is: "+str(end))
+
+    db.exec_("DROP TABLE if exists temp_table1")
+    # Route 1
+    db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
+         link_cost AS cost, 1000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
+         INNER JOIN cost_table ON(edge = lid)")
+
+    # Result table creating
+    db.exec_("DROP TABLE if exists result_table")
+    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
+        result_table FROM temp_table1")
+
+    # Getting total cost for route 1 and setting first stop criterion.
+    cost_q = db.exec_("SELECT sum(link_cost) FROM temp_table1")
+    cost_q.next()
+    route1_cost = cost_q.value(0)
+    # print("Current cost route 1: " + str(route1_cost))
+    # route_stop = route1_cost
+
+    # # Pen cost as breaking if stuck instead of nr_routes
+    # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
+    # pen_q.next()
+    # # print("Pencost för rutt: "+str(pen_q.value(0)))
+    # pen_stop = pen_q.value(0)
+
+    # Calculationg alternative routes
+    i = 2
+    nr_routes = 1
+    sum_overlap = 0
+    # while comp(route_stop, route1_cost, threshold):
+    while True:
+        if nr_routes >= 10000:
+            print("Warning: The number of routes was over 10 for start zone: \
+                 " + str(start_zone) + " and end zone: " + str(end_zone))
+            break
+
+        # Calculating penalizing term (P. 14 in thesis work)
+        # Delta value
+        delta_query = db.exec_("Select COUNT(*) from result_table")
+        delta_query.next()
+        delta = delta_query.value(0)
+        # print("DELTA VALUE IS =:"+str(delta))
+        # Parameter
+
+        # Route 2
+        db.exec_("DROP TABLE if exists temp_table2")
+        db.exec_("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
+            CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
+            FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000 AS reverse_cost \
+            FROM cost_table) AS subq LEFT JOIN \
+                (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(" + str(delta) + ") AS cost \
+            from result_table group by lid ) AS pen ON \
+            (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
+
+        # Saving route cost without penalty and updating route_stop.
+        cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
+            INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
+        cost_q.next()
+        route_stop = cost_q.value(0)
+        # print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+
+        # print("difference is = " + str(route_stop / route1_cost))
+
+        # Saving route cost with penalty. Remove comment if  penalty want to be used as breaking criterion
+        # pen_q = db.exec_("SELECT SUM(cost) from temp_table2")
+        # pen_q.next()
+        # # print("Pencost för rutt: "+str(pen_q.value(0)))
+        # pen_stop = pen_q.value(0)
+
+        if comp(route_stop, route1_cost, threshold):
+            db.exec_("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(
+                end_zone) + " AS end_zone, " + str(
+                i) + " AS did,*  FROM temp_table2")
+            # Coverage calculation here.
+            testa = db.exec_(
+                "SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM result_table WHERE did=" + str(i) + ") AS per \
+                FROM (SELECT did,lid,geom FROM result_table WHERE did=" + str(i) + " and lid = ANY(SELECT lid FROM result_table \
+                WHERE NOT did >= " + str(i) + ") group by lid,did,geom) as foo")
+            testa.next()
+            #print("rutt " + str(i) + " " + str(testa.value(0)) + " länk-km överlappar!")
+
+            db.exec_("DROP TABLE if exists temp_table1")
+            db.exec_("SELECT * INTO temp_table1 from temp_table2")
+            i = i + 1
+            nr_routes = nr_routes + 1
+        else:
+            break
+        if testa.value(0):
+            sum_overlap += testa.value(0)
+
+    db.exec_("INSERT INTO all_results SELECT * FROM result_table")
+    # print("all results inserted")
+    if nr_routes > 1:
+        return sum_overlap/(nr_routes-1)
+    else:
+        return 0
+
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
@@ -730,7 +867,7 @@ def main():
 
     if db.isValid():
         # Variable definitions
-        my = 0.1
+        my = 1
         threshold = 1.6
         # ___________________________________________________________________________________________________________________
 
@@ -740,21 +877,28 @@ def main():
 
         # List of OD-pairs
 
-
+        #Används för selected_routes (rutter OD-par runt city)
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
+
+        #Används för att analysera ruttgenereringsalgoritm
+        start_list = [7472, 6960, 7815,6878]
+        end_list = [7556,7556,7635,7635]
+
+        #Används för att analysera ruttset (Korta OD-par)
+        start_list = [7143,7603,7412,6904, 6970,7190,6893,7551,7894,7852,7223,7328,7648]
+        end_list = [6820,7585,7635,6870,6937,7170,7161,7539,7886,7946,6973,7308,7661]
+
+
         list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
         #list = [6904, 6884, 6837, 6776, 7835]
         removed_lid = 89227  # Götgatan
-        removed_lid = 83025  # Söderledstunneln
+        removed_lid = [830259]  # Söderledstunneln
 
         # [81488, 83171] för Essingeleden
         # [83025, 84145] för Söderleden
-        # removed_lids = [83025, 84145]
+        removed_lids = [83025, 84145]
 
-        # selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        # allToAllResultTable(list,my,threshold)
-        # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
@@ -766,27 +910,37 @@ def main():
             end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
             speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
-        #Södertälje - Bo (Nacka)
-        # start_zone = 7472
-        # end_zone = 7556
+        # selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
+        # allToAllResultTable(list,my,threshold)
+        # allToAll(list, removed_lids)
+        start_list = [7143,7603,7412,6904, 6970,7190,6893,7551,7894,7852,7223,7328,7648]
+        end_list = [6820,7585,7635,6870,6937,7170,7161,7539,7886,7946,6973,7308,7661]
+        my1 = 0.3
+        my2 = 10
+        start_zone = 6904
+        end_zone = 6837
 
-        #Hägersten - Bo
-        # start_zone = 6960
-        # end_zone = 7556
+        i = 0
+        # while i < len(start_list):
+        #     ODpairwiseMyTest(start_list[i],end_list[i],threshold,my1,my2)
+        #     i +=1
+        # ODpairwiseMyTest(start_zone, end_zone, threshold, my2, my1)
 
-        # Sydost --> Norr om Stockholm
-        start_zone = 7815
-        end_zone = 7635
+        # nr_routes = routeSetGeneration(start_zone, end_zone, my1, threshold)
+        # printRoutes(nr_routes)
+        my_list = [10]
 
-        # Rågsved --> Norr om Stockholm
-        start_zone = 6878
-        end_zone = 7635
-
-
-
-
-        nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
-        printRoutes(nr_routes)
+        j = 0
+        while j<len(my_list):
+            i = 0
+            sum_overlap = 0
+            while i < len(start_list):
+                #print("i är : " + str(i))
+                sum_overlap += overlapForMy(start_list[i],end_list[i], my_list[j], threshold)
+                #print(str(sum_overlap))
+                i += 1
+            print("my är: "+ str(my_list[j]) + " och resultatet blir: " + str(sum_overlap/i))
+            j +=1
 
         # ___________________________________________________________________________________________________________________
 
