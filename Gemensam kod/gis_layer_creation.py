@@ -46,7 +46,7 @@ def printRoutes():
     query = db.exec_("SELECT MAX(did) FROM result_table")
     query.next()
     nr_routes = query.value(0)
-    print("the number of routes ="+str(nr_routes))
+
     while i <= nr_routes:
         sqlcall = "(SELECT * FROM result_table WHERE did=" + str(i) + ")"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
