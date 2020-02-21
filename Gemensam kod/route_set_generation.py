@@ -85,11 +85,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
-    db.exec_("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
     db.exec_("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
         node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
@@ -161,7 +156,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         route_stop = cost_q.value(0)
-        # print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+        print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
 
         # print("difference is = " + str(route_stop / route1_cost))
 
@@ -430,7 +425,7 @@ def onetoMany(one_node):
     FROM model_graph'," + str(one_node) + ", ARRAY(SELECT start_node FROM od_lid WHERE NOT \
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
-# Analysing all-to-all result for list and removed lid
+# Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
 def allToAll(list,removed_lids):
     #Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
@@ -895,20 +890,23 @@ def main():
         removed_lid = 89227  # Götgatan
         removed_lid = [830259]  # Söderledstunneln
 
+
         # [81488, 83171] för Essingeleden
         # [83025, 84145] för Söderleden
         removed_lids = [83025, 84145]
-
+        selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
+        # allToAllResultTable(list,my,threshold)
+        # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
 
-        db.exec_("DROP TABLE if exists all_results")
-        db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-            node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-            link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-            end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-            speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+        # db.exec_("DROP TABLE if exists all_results")
+        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
+        #     node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
+        #     link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
+        #     end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
+        #     speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
         # allToAllResultTable(list,my,threshold)
@@ -941,6 +939,7 @@ def main():
                 i += 1
             print("my är: "+ str(my_list[j]) + " och resultatet blir: " + str(sum_overlap/i))
             j +=1
+
 
         # ___________________________________________________________________________________________________________________
 
