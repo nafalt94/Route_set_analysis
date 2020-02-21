@@ -47,6 +47,7 @@ def comp(var1, var2, t):
     else:
         return False
 
+# Send in zone number and get start node number of that zone.
 def genonenode(zone):
     cur.execute("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
                 ORDER BY id, distance) AS score, id, lid, start_node, distance \
@@ -60,7 +61,8 @@ def genonenode(zone):
 
     cur.execute("SELECT start_node FROM od_lid WHERE id=" + str(zone))
     result = cur.fetchone()
-    print("THE NODE" + str(result[0]))
+
+
     if result is not None:
         node = result[0]
     else:
@@ -80,31 +82,31 @@ def genonenode(zone):
 
 def routeSetGeneration(start_zone, end_zone, my, threshold):
 
-    db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
+    cur.execute("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
 
-    #print("Start node is: "+str(start)+" End node is: "+str(end))
+    print("Start node is: "+str(start)+" End node is: "+str(end))
 
-    db.exec_("DROP TABLE if exists temp_table1")
+    cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
-    db.exec_("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
+    cur.execute("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
      link_cost AS cost, 1000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
      INNER JOIN cost_table ON(edge = lid)")
 
 
     # Result table creating
-    db.exec_("DROP TABLE if exists result_table")
-    db.exec_("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
+    cur.execute("DROP TABLE if exists result_table")
+    cur.execute("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
     result_table FROM temp_table1")
 
     # Getting total cost for route 1 and setting first stop criterion.
-    cost_q = db.exec_("SELECT sum(link_cost) FROM temp_table1")
-    cost_q.next()
-    route1_cost = cost_q.value(0)
-    #print("Current cost route 1: " + str(route1_cost))
+    cur.execute("SELECT sum(link_cost) FROM temp_table1")
+    cost_q = cur.fetchone()
+    route1_cost = cost_q[0]
+    print("Current cost route 1: " + str(route1_cost))
     #route_stop = route1_cost
 
     # # Pen cost as breaking if stuck instead of nr_routes
@@ -126,15 +128,15 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
         # Calculating penalizing term (P. 14 in thesis work)
         # Delta value
-        delta_query = db.exec_("Select COUNT(*) from result_table")
-        delta_query.next()
-        delta = delta_query.value(0)
-        #print("DELTA VALUE IS =:"+str(delta))
+        cur.execute("Select COUNT(*) from result_table")
+        delta = cur.fetchone()[0]
+
+        print("DELTA VALUE IS =:"+str(delta))
         # Parameter
 
         # Route 2
-        db.exec_("DROP TABLE if exists temp_table2")
-        db.exec_("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
+        cur.execute("DROP TABLE if exists temp_table2")
+        cur.execute("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
         CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
         FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000 AS reverse_cost \
         FROM cost_table) AS subq LEFT JOIN \
@@ -143,11 +145,11 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
         # Saving route cost without penalty and updating route_stop.
-        cost_q = db.exec_("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
+        cur.execute("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
-        cost_q.next()
-        route_stop = cost_q.value(0)
-        # print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+        route_stop = cur.fetchone()[0]
+        #route_stop = cost_q.value(0)
+        print("Current cost route " + str(i) + ": " + str(route_stop))
 
         # print("difference is = " + str(route_stop / route1_cost))
 
@@ -158,7 +160,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         # pen_stop = pen_q.value(0)
 
         if comp(route_stop, route1_cost, threshold):
-            db.exec_("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(
+            cur.execute("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(
                 end_zone) + " AS end_zone, " + str(
                 i) + " AS did,*  FROM temp_table2")
             # Coverage calculation here.
@@ -185,15 +187,16 @@ cur = conn.cursor()
 
 def main():
 
-    cur.execute("SELECT * FROM od_lid limit 10")
-    print("FETCHED"+str(cur.fetchall()))
+    #cur.execute("SELECT * FROM od_lid limit 10")
+    #print("FETCHED"+str(cur.fetchall()))
+    #print("GENNODE::"+str(genonenode(7842)))
 
-    print("GENNODE::"+str(genonenode(7950)))
 
     # Variable definitions
     my = 0.3
     threshold = 1.6
 
+    routeSetGeneration(7815,7635,my,threshold)
 # ___________________________________________________________________________________________________________________
 
 # __________________________________________________________________________________________________________________
