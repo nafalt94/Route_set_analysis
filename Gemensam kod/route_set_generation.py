@@ -156,7 +156,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         route_stop = cost_q.value(0)
-        print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+        #print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
 
         # print("difference is = " + str(route_stop / route1_cost))
 
@@ -876,13 +876,13 @@ def main():
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
 
-        #Används för att analysera ruttgenereringsalgoritm
-        start_list = [7472, 6960, 7815,6878]
-        end_list = [7556,7556,7635,7635]
+        # Korta OD-par
+        start_list = [7143, 7603, 7412, 6904, 6970, 7190, 6893, 7551, 7894, 7852, 7223, 7328, 7648]
+        end_list = [6820, 7585, 7635, 6870, 6937, 7170, 7161, 7539, 7886, 7946, 6973, 7308, 7661]
 
-        #Används för att analysera ruttset (Korta OD-par)
-        start_list = [7143,7603,7412,6904, 6970,7190,6893,7551,7894,7852,7223,7328,7648]
-        end_list = [6820,7585,7635,6870,6937,7170,7161,7539,7886,7946,6973,7308,7661]
+        # Långa OD-par
+        start_list = [7472, 7815,7128,7801,7707,7509,7304,7151,7487,7737]
+        end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
 
 
         list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
@@ -911,10 +911,7 @@ def main():
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
-        start_list = [7143,7603,7412,6904, 6970,7190,6893,7551,7894,7852,7223,7328,7648]
-        end_list = [6820,7585,7635,6870,6937,7170,7161,7539,7886,7946,6973,7308,7661]
-        my1 = 0.3
-        my2 = 10
+
         start_zone = 6904
         end_zone = 6837
 
@@ -926,7 +923,8 @@ def main():
 
         # nr_routes = routeSetGeneration(start_zone, end_zone, my1, threshold)
         # printRoutes(nr_routes)
-        my_list = [10]
+
+        my_list = [0.01, 0.05, 0.2, 0.4, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 3, 5, 10]
 
         j = 0
         while j<len(my_list):
