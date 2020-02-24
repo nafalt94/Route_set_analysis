@@ -4,6 +4,7 @@
 # Imports
 import time
 import psycopg2
+from timeit import default_timer as timer
 
 
 
@@ -82,6 +83,7 @@ def genonenode(zone):
 
 def routeSetGeneration(start_zone, end_zone, my, threshold):
 
+
     cur.execute("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
     cur.execute("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
@@ -126,7 +128,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     # while comp(route_stop, route1_cost, threshold):
     while True:
-        if nr_routes >= 10:
+        if nr_routes >= 100000:
             print("Warning: The number of routes was over 10 for start zone: \
             " + str(start_zone) + " and end zone: " + str(end_zone))
             break
@@ -185,7 +187,11 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     cur.execute("INSERT INTO all_results SELECT * FROM result_table")
     conn.commit()
     #print("all results inserted")
+
+
+
     return nr_routes
+
 
 # Generates result table for selected OD-pairs
 def selectedODResultTable(start_list, end_list, my, threshold, removed_lids):
@@ -331,7 +337,7 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.3
+    my = 10
     threshold = 1.6
 
     # Which zones to route between
@@ -353,8 +359,8 @@ def main():
     # Uncomment what typ of method you want to use.
 
     # Single route set
-    # cur.execute("DROP TABLE if exists all_results")
-    # routeSetGeneration(start, end, my, threshold)
+    cur.execute("DROP TABLE if exists all_results")
+    routeSetGeneration(start, end, my, threshold)
 
     # Generate OD-pairs route sets between the zones in start_list and end_list
     # selectedODResultTable(start_list, end_list, my, threshold, removed_lid)
