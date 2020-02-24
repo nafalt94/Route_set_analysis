@@ -426,7 +426,7 @@ def onetoMany(one_node):
     (start_node='" + str(one_node) + "'))) INNER JOIN cost_table ON(edge = lid) ")
 
 # Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
-def allToAll(list,removed_lids):
+def allToAll(list, removed_lids):
     #Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
 
@@ -887,6 +887,7 @@ def main():
 
         list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
         #list = [6904, 6884, 6837, 6776, 7835]
+
         removed_lid = 89227  # Götgatan
         removed_lid = [830259]  # Söderledstunneln
 
@@ -895,18 +896,15 @@ def main():
         # [83025, 84145] för Söderleden
         removed_lids = [83025, 84145]
         selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
+
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
 
-        # db.exec_("DROP TABLE if exists all_results")
-        # db.exec_("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-        #     node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-        #     link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-        #     end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-        #     speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+        db.exec_("DROP TABLE if exists all_results")
+
 
         # selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
         # allToAllResultTable(list,my,threshold)

@@ -361,7 +361,7 @@ def main():
         removeRoutesLayers()
 
         # Create layer for one route set (run routeSetGeneration before).
-        #printRoutes()
+        printRoutes()
 
 
         # Creates new visualisation layer for selected pairs (run selectedODResultTable before).
