@@ -82,7 +82,6 @@ def genonenode(zone):
 
 # Generates a route set between two zone id:s.
 def routeSetGeneration(start_zone, end_zone, my, threshold):
-
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
 
@@ -114,7 +113,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     cost_q.next()
     route1_cost = cost_q.value(0)
     #print("Current cost route 1: " + str(route1_cost))
-    #route_stop = route1_cost
+    route_stop = route1_cost
 
     # # Pen cost as breaking if stuck instead of nr_routes
     # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
@@ -128,7 +127,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     # while comp(route_stop, route1_cost, threshold):
     while True:
-        if nr_routes >= 10:
+        if nr_routes >= 50:
             print("Warning: The number of routes was over 10 for start zone: \
              " + str(start_zone) + " and end zone: " + str(end_zone))
             break
@@ -147,7 +146,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
         FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000 AS reverse_cost \
         FROM cost_table) AS subq LEFT JOIN \
-            (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(" + str(delta) + ") AS cost \
+            (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * "+str(route_stop)+"))*LN(" + str(delta) + ") AS cost \
         from result_table group by lid ) AS pen ON \
         (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
@@ -156,7 +155,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         route_stop = cost_q.value(0)
-        #print("Current cost route " + str(i) + ": " + str(cost_q.value(0)))
+        # print("Current cost route " + str(i) + ": " + str(route_stop))
 
         # print("difference is = " + str(route_stop / route1_cost))
 
@@ -694,27 +693,8 @@ def onetoManyPenalty(one_node, many_nodes_list, my):
         i = i + 1
         nr_routes = nr_routes + 1
 
-#Returns prop. of extra link IDs in my2 compared to my1
-def ODpairwiseMyTest(start_zone,end_zone,threshold, my1,my2):
-
-    routeSetGeneration(start_zone, end_zone, my1, threshold)
-    db.exec_("drop table if exists temp")
-    db.exec_("select * into temp from all_results")
-    db.exec_("drop table all_results")
-    routeSetGeneration(start_zone, end_zone, my2, threshold)
-
-    #Number of links not existing for my2
-    nr_unique = db.exec_("SELECT COUNT(*) FROM all_results t1 LEFT JOIN temp t2 ON t1.lid = t2.lid WHERE t2.lid IS NULL ")
-    nr_unique.next()
-    #Tot number of links existing for my2
-    nr_tot = db.exec_("select COUNT(*) from all_results")
-    nr_tot.next()
-
-    prop = nr_unique.value(0)/nr_tot.value(0)
-    print("Proportion extra links: " + str(prop))
-
 #Similar to routeSetGeneration, reuturns overlap
-def overlapForMy(start_zone, end_zone, my, threshold):
+def overlapDifferentMy(start_zone, end_zone, my, threshold):
 
     db.exec_("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
         from model_graph)")
@@ -751,7 +731,7 @@ def overlapForMy(start_zone, end_zone, my, threshold):
     cost_q.next()
     route1_cost = cost_q.value(0)
     # print("Current cost route 1: " + str(route1_cost))
-    # route_stop = route1_cost
+    route_stop = route1_cost
 
     # # Pen cost as breaking if stuck instead of nr_routes
     # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
@@ -765,7 +745,7 @@ def overlapForMy(start_zone, end_zone, my, threshold):
     sum_overlap = 0
     # while comp(route_stop, route1_cost, threshold):
     while True:
-        if nr_routes >= 10000:
+        if nr_routes >= 50:
             print("Warning: The number of routes was over 10 for start zone: \
                  " + str(start_zone) + " and end zone: " + str(end_zone))
             break
@@ -784,7 +764,7 @@ def overlapForMy(start_zone, end_zone, my, threshold):
             CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
             FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000 AS reverse_cost \
             FROM cost_table) AS subq LEFT JOIN \
-                (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * min(cost)))*LN(" + str(delta) + ") AS cost \
+                (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * "+str(route_stop)+"))*LN(" + str(delta) + ") AS cost \
             from result_table group by lid ) AS pen ON \
             (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
@@ -831,6 +811,37 @@ def overlapForMy(start_zone, end_zone, my, threshold):
     else:
         return 0
 
+def excelStats(start_list,end_list,my_list,threshold):
+    db.exec_("DROP TABLE if exists all_results")
+    #Overlap
+    j = 0
+    while j < len(my_list):
+        tic()
+        i = 0
+        sum_overlap = 0
+        while i < len(start_list):
+            # print("i är : " + str(i))
+            sum_overlap += overlapDifferentMy(start_list[i], end_list[i], my_list[j], threshold)
+            # print(str(sum_overlap))
+            i += 1
+        print("my är: " + str(my_list[j]) +  " med overlap: " + str(sum_overlap / i))
+        j += 1
+        toc()
+    db.exec_("DROP TABLE if exists all_results")
+
+    # Nr routes
+    j = 0
+    while j < len(my_list):
+        i = 0
+        sum_nr_routes = 0
+        while i < len(start_list):
+            # print("i är : " + str(i))
+            sum_nr_routes += routeSetGeneration(start_list[i], end_list[i], my_list[j], threshold)
+            # print(str(sum_overlap))
+            i += 1
+        print("my är: " + str(my_list[j]) + " med avg nr routes: " + str(sum_nr_routes / i))
+        j += 1
+
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
@@ -862,8 +873,8 @@ def main():
 
     if db.isValid():
         # Variable definitions
-        my = 1
-        threshold = 1.6
+        my = 0.05
+        threshold = 1.25
         # ___________________________________________________________________________________________________________________
 
         # __________________________________________________________________________________________________________________
@@ -881,8 +892,8 @@ def main():
         end_list = [6820, 7585, 7635, 6870, 6937, 7170, 7161, 7539, 7886, 7946, 6973, 7308, 7661]
 
         # Långa OD-par
-        start_list = [7472, 7815,7128,7801,7707,7509,7304,7151,7487,7737]
-        end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
+        # start_list = [7472, 7815,7128,7801,7707,7509,7304,7151,7487,7737]
+        # end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
 
 
         list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
@@ -895,46 +906,29 @@ def main():
         # [81488, 83171] för Essingeleden
         # [83025, 84145] för Söderleden
         removed_lids = [83025, 84145]
-        selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
+        #selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
 
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
-
-        # Generating a single route set
-
         db.exec_("DROP TABLE if exists all_results")
+        db.exec_("DROP TABLE if exists cost_table")
 
 
-        # selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
+        my_list = [0.01, 0.05, 0.2, 0.4, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 3, 5, 10]
+        my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]
+        #my_list = [0.05]
+
+        #selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
+        excelStats(start_list, end_list, my_list,threshold)
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
 
-        start_zone = 6904
-        end_zone = 6837
+        start_zone = 7472
+        end_zone = 7556
 
-        i = 0
-        # while i < len(start_list):
-        #     ODpairwiseMyTest(start_list[i],end_list[i],threshold,my1,my2)
-        #     i +=1
-        # ODpairwiseMyTest(start_zone, end_zone, threshold, my2, my1)
-
-        # nr_routes = routeSetGeneration(start_zone, end_zone, my1, threshold)
+        # nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
         # printRoutes(nr_routes)
-
-        my_list = [0.01, 0.05, 0.2, 0.4, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 3, 5, 10]
-
-        j = 0
-        while j<len(my_list):
-            i = 0
-            sum_overlap = 0
-            while i < len(start_list):
-                #print("i är : " + str(i))
-                sum_overlap += overlapForMy(start_list[i],end_list[i], my_list[j], threshold)
-                #print(str(sum_overlap))
-                i += 1
-            print("my är: "+ str(my_list[j]) + " och resultatet blir: " + str(sum_overlap/i))
-            j +=1
 
 
         # ___________________________________________________________________________________________________________________
