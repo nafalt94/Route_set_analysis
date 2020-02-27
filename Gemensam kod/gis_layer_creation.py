@@ -43,6 +43,7 @@ def removeRoutesLayers():
 # Prints a route set based on whats in result_table.
 def printRoutes():
     i = 1
+    # WHERE rejoin_link=0   insert into to print
     query = db.exec_("SELECT MAX(did) FROM result_table")
     query.next()
     nr_routes = query.value(0)
@@ -54,6 +55,47 @@ def printRoutes():
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
+def printRoutesRejoin():
+    i = 1
+    # WHERE rejoin_link=0   insert into to print
+    query = db.exec_("SELECT MAX(did) FROM result_table")
+    query.next()
+    nr_routes = query.value(0)
+
+    while i <= nr_routes:
+        sqlcall = "(SELECT * FROM result_table WHERE did=" + str(i) + " and rejoin_link=0)"
+        uri.setDataSource("", sqlcall, "geom", "", "lid")
+        layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
+        QgsProject.instance().addMapLayer(layert)
+        i = i + 1
+
+    # feats = layert.getFeatures()
+    # i=1
+    # for feat in feats:
+    #     geom = feat.geometry()
+    #     geomSingleType = QgsWkbTypes.isSingleType(geom.wkbType())
+    #     if geom.type() == QgsWkbTypes.LineGeometry:
+    #         if geomSingleType:
+    #             x = geom.asPolyline()
+    #             #print("line:", x)
+    #         else:
+    #             x = geom.asMultiPolyline()
+    #             #print("multiline:", x)
+    # start_point = QgsPointXY(x[0][0])
+    # feat = QgsFeature()
+    # point_layer = QgsVectorLayer("Point?crs=epsg:3006", "point_layer", "memory")
+    # pr = point_layer.dataProvider()
+    # feat.setGeometry(QgsGeometry.fromPointXY(start_point))
+    # pr.addFeatures([feat])
+    # QgsProject.instance().addMapLayer(point_layer)
+    
+#    multilinestring = layert.getFeatures("route 1").geometry()
+#    first_part = multilinestring.geometryN(0)
+    
+        
+        
+    
+    
 # det jag behöver få från databasen start_list, end_list, lids
 def print_selected_pairs():
     # Removes layers not specified in removeRoutesLayers
@@ -361,8 +403,8 @@ def main():
         removeRoutesLayers()
 
         # Create layer for one route set (run routeSetGeneration before).
-        printRoutes()
-
+        #printRoutes()
+        printRoutesRejoin()
 
         # Creates new visualisation layer for selected pairs (run selectedODResultTable before).
         #print_selected_pairs()
