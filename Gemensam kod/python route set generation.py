@@ -355,13 +355,14 @@ def route_set_lenght(nr_routes):
 
 
 # OBSERVE some problems regarding when to put tube penalty
-def route_set_generation_tube(start_zone, end_zone, my, threshold, range):
+def route_set_generation_rejoin(start_zone, end_zone, my, threshold, range):
 
     print("TUBE IT UP! :"+str(range))
 
     cur.execute("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
-    cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, \
+    cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, start_node \
+            BIGINT, end_node BIGINT, \
             geom geometry,cost double precision,link_cost DOUBLE PRECISION,path_seq INT,agg_cost DOUBLE PRECISION, \
             speed numeric, fcn_class BIGINT)")
 
@@ -379,14 +380,18 @@ def route_set_generation_tube(start_zone, end_zone, my, threshold, range):
 
     # Result table creating
     cur.execute("DROP TABLE if exists result_table")
-    cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
+    cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, start_node, end_node, \
     geom, cost, link_cost, path_seq, agg_cost, speed, fcn_class, 0 as rejoin_link INTO \
     result_table FROM temp_table1")
 
-    cur.execute("INSERT INTO result_table SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, a.lid, NULL as node, \
+    cur.execute("INSERT INTO result_table SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) +
+        " AS end_zone, a.lid, a.start_node, a.end_node, \
         a.geom, a.link_cost as cost, a.link_cost,b.path_seq, b.agg_cost, a.speed, a.fcn_class, 1 as rejoin_link  \
-        FROM cost_table AS a INNER JOIN result_table AS b ON (ST_DWithin(a.geom,b.geom,1)) \
-        WHERE NOT EXISTS (SELECT FROM result_table WHERE a.lid=lid) group by a.lid, a.geom, a.link_cost, b.agg_cost, a.speed, a.fcn_class, b.path_seq")
+        FROM  cost_table AS a INNER JOIN result_table as b ON( \
+		b.start_node=a.start_node or b.end_node = a.start_node or b.end_node=a.end_node \
+		or b.start_node=a.end_node) \
+		WHERE NOT EXISTS (SELECT * FROM result_table WHERE lid=a.lid)")
+
 
     # Getting total cost for route 1 and setting first stop criterion.
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
@@ -406,7 +411,7 @@ def route_set_generation_tube(start_zone, end_zone, my, threshold, range):
 
     # while comp(route_stop, route1_cost, threshold):
     while True:
-        if nr_routes >= 100:
+        if nr_routes >= 1:
             print("Warning: The number of routes was over 10 for start zone: \
             " + str(start_zone) + " and end zone: " + str(end_zone))
             break
@@ -425,7 +430,7 @@ def route_set_generation_tube(start_zone, end_zone, my, threshold, range):
         CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
         FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 10000 AS reverse_cost \
         FROM cost_table) AS subq LEFT JOIN \
-             (select lid as edge, CASE WHEN rejoin_link=0 THEN max(cost) + (max(cost)/(" + str(my) + " * " + str(route_stop) + "))*LN(" + str(delta) + ") ELSE max(cost)+100 END  AS cost \
+             (select lid as edge, CASE WHEN rejoin_link=0 THEN max(cost) + (max(cost)/(" + str(my) + " * " + str(route_stop) + "))*LN(" + str(delta) + ") ELSE max(cost)+max(cost)*0.5 END  AS cost \
         from result_table group by lid,rejoin_link) AS pen ON \
         (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
@@ -447,29 +452,35 @@ def route_set_generation_tube(start_zone, end_zone, my, threshold, range):
         # pen_stop = pen_q.value(0)
 
         if comp(route_stop, route1_cost, threshold):
+
             cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
-                + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost,path_seq, agg_cost, speed, fcn_class, \
-                0 as rejoin_link  FROM temp_table2")
+                + str(end_zone) + " AS end_zone, lid, start_node, end_node, geom, cost, link_cost,path_seq, agg_cost, speed, fcn_class, \
+                0 as rejoin_link FROM temp_table2")
+
             cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
-                        + str(end_zone) + " AS end_zone, a.lid, NULL as node, a.geom, a.link_cost as cost, a.link_cost,\
-                 b.path_seq ,b.agg_cost, a.speed, a.fcn_class, 1 as rejoin_link FROM cost_table AS a INNER JOIN result_table AS b \
-                 ON (ST_DWithin(a.geom,b.geom,1)) WHERE NOT EXISTS (SELECT FROM result_table WHERE a.lid=lid) group \
-                 by a.lid, a.geom, a.link_cost, b.agg_cost, a.speed, a.fcn_class, b.path_seq")
+                + str(end_zone) + " AS end_zone, a.lid, a.start_node, a.end_node, a.geom, a.link_cost as cost, a.link_cost,\
+                b.path_seq ,b.agg_cost, a.speed, a.fcn_class, 1 as rejoin_link FROM cost_table AS a INNER JOIN result_table as b ON( \
+		        b.start_node=a.start_node or b.end_node = a.start_node or b.end_node=a.end_node \
+		        or b.start_node=a.end_node) \
+		        WHERE NOT EXISTS (SELECT * FROM result_table WHERE lid=a.lid)")
+
             # Coverage calculation here.
+
             cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM result_table WHERE \
-            did="+str(i)+") AS per FROM (SELECT did,lid,geom FROM result_table WHERE did="+str(i)+" and lid = \
+            did="+str(i)+" and rejoin_link = 0)  AS per FROM (SELECT did,lid,geom FROM result_table WHERE did="+str(i)+" and lid = \
             ANY(SELECT lid FROM result_table WHERE NOT did >= "+str(i)+") group by lid,did,geom) as foo")
             coverage = cur.fetchone()
             print("rutt " + str(i) + " " + str(coverage) + " länkar överlappar!")
 
             cur.execute("DROP TABLE if exists temp_table1")
             cur.execute("SELECT * INTO temp_table1 from temp_table2")
+
             i = i + 1
             nr_routes = nr_routes + 1
         else:
             break
 
-    cur.execute("INSERT INTO all_results SELECT did, start_zone, end_zone, lid, node, geom, cost, link_cost, path_seq,agg_cost, speed, fcn_class lid FROM result_table")
+    cur.execute("INSERT INTO all_results SELECT did, start_zone, end_zone, lid, start_node, end_node, geom, cost, link_cost, path_seq,agg_cost, speed, fcn_class lid FROM result_table")
     conn.commit()
     #print("all results inserted")
 
@@ -489,12 +500,12 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.01
+    my = 0.02
     threshold = 1.25
 
     # Which zones to route between
-    start = 7472
-    end = 7556
+    start = 7515
+    end = 7724
 
     # Which zones in list to route between
     start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
@@ -524,7 +535,7 @@ def main():
     #     j += 1
     cur.execute("DROP TABLE if exists all_results")
     range = 1
-    route_set_generation_tube(start, end, my, threshold, range)
+    route_set_generation_rejoin(start, end, my, threshold, range)
     #routeSetGeneration(start, end, my, threshold)
     #onetoMany(6904)
 

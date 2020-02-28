@@ -69,19 +69,26 @@ def printRoutesRejoin():
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
-    # feats = layert.getFeatures()
-    # i=1
-    # for feat in feats:
-    #     geom = feat.geometry()
-    #     geomSingleType = QgsWkbTypes.isSingleType(geom.wkbType())
-    #     if geom.type() == QgsWkbTypes.LineGeometry:
-    #         if geomSingleType:
-    #             x = geom.asPolyline()
-    #             #print("line:", x)
-    #         else:
-    #             x = geom.asMultiPolyline()
-    #             #print("multiline:", x)
-    # start_point = QgsPointXY(x[0][0])
+    feats = layert.getFeatures()
+    i=1
+    for feat in feats:
+        geom = feat.geometry()
+        geomSingleType = QgsWkbTypes.isSingleType(geom.wkbType())
+        if geom.type() == QgsWkbTypes.LineGeometry:
+            if geomSingleType:
+                x = geom.asPolyline()
+                #print("line:", x)
+            else:
+                x = geom.asMultiPolyline()
+                print([len(v) for v in x])
+                #print("multiline:", x)
+
+    # for vert in x:
+    #     points.append(vert)
+    #     print(vert)
+    # print("number of points:"+str(len(points)))
+    # print(points[0][0])
+    # start_point = QgsPointXY(points[0][0])
     # feat = QgsFeature()
     # point_layer = QgsVectorLayer("Point?crs=epsg:3006", "point_layer", "memory")
     # pr = point_layer.dataProvider()
@@ -412,9 +419,10 @@ def main():
         # All to all visualisation for all pairs in list (run AllToAllResultTable before).
         #allToAll()
 
+    toc()
 
 
 if __name__ == "__main__" or __name__ == "__console__":
     main()
 db.close()
-toc;
+
