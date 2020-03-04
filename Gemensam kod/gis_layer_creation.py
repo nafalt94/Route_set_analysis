@@ -5,6 +5,8 @@ from PyQt5.QtSql import *
 from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
 
+
+
 print(__name__)
 
 # Function definition
@@ -46,14 +48,117 @@ def printRoutes():
     # WHERE rejoin_link=0   insert into to print
     query = db.exec_("SELECT MAX(did) FROM result_table")
     query.next()
+    print(query.value(0))
     nr_routes = query.value(0)
 
+    # Källa https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+    color_list = [QColor.fromRgb(128, 0, 0), QColor.fromRgb(170, 10, 40), QColor.fromRgb(128, 128, 0),
+                  QColor.fromRgb(0, 128, 128), QColor.fromRgb(0, 0, 128), QColor.fromRgb(0, 0, 0),
+                  QColor.fromRgb(230, 25, 75), QColor.fromRgb(245, 130, 48), QColor.fromRgb(255, 255, 25),
+                  QColor.fromRgb(210, 245, 60), QColor.fromRgb(60, 180, 75), QColor.fromRgb(70, 240, 240),
+                  QColor.fromRgb(0, 130, 200), QColor.fromRgb(145, 30, 180), QColor.fromRgb(240, 50, 230),
+                  QColor.fromRgb(128, 128, 128), QColor.fromRgb(250, 190, 190), QColor.fromRgb(255, 215, 180),
+                  QColor.fromRgb(255, 250, 200), QColor.fromRgb(170, 255, 195)]
+    bad_color = ['Maroon', 'Magenta', 'Olive','Orange','Navy', 'Black', 'Red', 'Teal', 'Blue', 'Lime', 'Cyan', 'Green'
+        , 'Brown', 'Purple', 'Yellow', 'Grey', 'Pink', 'Apricot', 'Beige', 'Mint', 'Lavender']
     while i <= nr_routes:
-        sqlcall = "(SELECT * FROM result_table WHERE did=" + str(i) + ")"
+        # Routes without offset
+        sqlcall = "(select lid, did, geom from result_table where lid in (select lid from result_table group by lid having \
+        count(*) = 1) and did =" + str(i) + " group by lid, did, geom ORDER BY lid, did)"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
         layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
         QgsProject.instance().addMapLayer(layert)
+        symbol = QgsLineSymbol.createSimple({'color': bad_color[i],
+                                             'width': '0.6',
+                                             'offset': '0'})
+        renderers = layert.renderer()
+        renderers.setSymbol(symbol.clone())
+        qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
+        # single_symbol_renderer = layert.renderer()
+        # symbol = single_symbol_renderer.symbol()
+        # symbol.setWidth(0.8)
+
+        # Routes in need of offset
+        sqlcall = "(select lid, did, geom from result_table where lid in (select lid from result_table \
+        group by lid having count(*) > 1) and did=" + str(i) + " group by lid, did, geom ORDER BY lid, did)"
+        uri.setDataSource("", sqlcall, "geom", "", "lid")
+        layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
+        QgsProject.instance().addMapLayer(layert)
+        if i == 1:
+                offset=0
+        else:
+            offset = i-i*0.7
+        print("i is "+str(i)+" and offset is:"+str(offset))
+        symbol = QgsLineSymbol.createSimple({'color': bad_color[i],
+                                                  'width': '0.4',
+                                                  'offset': str(offset)})
+        renderers = layert.renderer()
+        renderers.setSymbol(symbol.clone())
+        qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
+
+
+        # single_symbol_renderer = layert.renderer()
+        # symbol = single_symbol_renderer.symbol()
+        # symbol.setWidth(0.8)
+
+
+        #
+        # if i < len(color_list):
+        #     symbol.setColor(color_list[i])
+        #     layert.triggerRepaint()
+        #     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
+        #
         i = i + 1
+
+    # Start node
+    start_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,1)) AS start \
+        FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
+        FROM result_table WHERE did=1 and path_seq=1) As foo")
+    start_q.next()
+    layer = QgsVectorLayer('Point?crs=epsg:3006', 'Start', 'memory')
+    # Set the provider to accept the data source
+    prov = layer.dataProvider()
+    # Add a new feature and assign the geometry
+    feat = QgsFeature()
+    feat.setGeometry(QgsGeometry.fromWkt(start_q.value(1)))
+    prov.addFeatures([feat])
+    # Update extent of the layer
+    layer.updateExtents()
+    # Add the layer to the Layers panel
+    QgsProject.instance().addMapLayer(layer)
+    single_symbol_renderer = layer.renderer()
+    symbol = single_symbol_renderer.symbol()
+    symbol.setColor(QColor.fromRgb(0, 225, 0))
+    symbol.setSize(3)
+    # more efficient than refreshing the whole canvas, which requires a redraw of ALL layers
+    layer.triggerRepaint()
+    # update legend for layer
+    qgis.utils.iface.layerTreeView().refreshLayerSymbology(layer.id())
+
+
+    # End Node
+    end_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,-1)) AS start FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
+    FROM result_table  WHERE path_seq = (SELECT max(path_seq) FROM result_table WHERE did=1) and did=1) AS foo")
+    end_q.next()
+    layere = QgsVectorLayer('Point?crs=epsg:3006', 'END', 'memory')
+    # Set the provider to accept the data source
+    prov = layere.dataProvider()
+    # Add a new feature and assign the geometry
+    feat = QgsFeature()
+    feat.setGeometry(QgsGeometry.fromWkt(end_q.value(1)))
+    prov.addFeatures([feat])
+    # Update extent of the layer
+    layere.updateExtents()
+    # Add the layer to the Layers panel
+    QgsProject.instance().addMapLayer(layere)
+    single_symbol_renderer = layere.renderer()
+    symbol = single_symbol_renderer.symbol()
+    symbol.setColor(QColor.fromRgb(255, 0, 0))
+    symbol.setSize(3)
+    layere.triggerRepaint()
+    qgis.utils.iface.layerTreeView().refreshLayerSymbology(layere.id())
+
+
 
 def printRoutesRejoin():
     i = 1
@@ -62,43 +167,122 @@ def printRoutesRejoin():
     query.next()
     nr_routes = query.value(0)
 
+    # Källa https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
+    color_list = [QColor.fromRgb(128, 0, 0), QColor.fromRgb(170, 10, 40), QColor.fromRgb(128, 128, 0),
+                  QColor.fromRgb(0, 128, 128), QColor.fromRgb(0, 0, 128), QColor.fromRgb(0, 0, 0),
+                  QColor.fromRgb(230, 25, 75), QColor.fromRgb(245, 130, 48), QColor.fromRgb(255, 255, 25),
+                  QColor.fromRgb(210, 245, 60), QColor.fromRgb(60, 180, 75), QColor.fromRgb(70, 240, 240),
+                  QColor.fromRgb(0, 130, 200), QColor.fromRgb(145, 30, 180), QColor.fromRgb(240, 50, 230),
+                  QColor.fromRgb(128, 128, 128), QColor.fromRgb(250, 190, 190), QColor.fromRgb(255, 215, 180),
+                  QColor.fromRgb(255, 250, 200), QColor.fromRgb(170, 255, 195)]
+    bad_color = ['Maroon', 'Magenta', 'Olive', 'Orange', 'Navy', 'Black', 'Red', 'Teal', 'Blue', 'Lime', 'Cyan', 'Green'
+        , 'Brown', 'Purple', 'Yellow', 'Grey', 'Pink', 'Apricot', 'Beige', 'Mint', 'Lavender']
+
     while i <= nr_routes:
-        sqlcall = "(SELECT * FROM result_table WHERE did=" + str(i) + " and rejoin_link=0)"
+        # Routes without offset
+        sqlcall = "(select lid, did, geom from result_table where lid in (select lid from result_table group by lid having \
+               count(*) = 1) and did =" + str(i) + " and rejoin_link=0 group by lid, did, geom ORDER BY lid, did)"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
         layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
         QgsProject.instance().addMapLayer(layert)
+        symbol = QgsLineSymbol.createSimple({'color': bad_color[i],
+                                             'width': '0.6',
+                                             'offset': '0'})
+        renderers = layert.renderer()
+        renderers.setSymbol(symbol.clone())
+        qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
+        # single_symbol_renderer = layert.renderer()
+        # symbol = single_symbol_renderer.symbol()
+        # symbol.setWidth(0.8)
+
+        # Routes in need of offset
+        sqlcall = "(select lid, did, geom from result_table where lid in (select lid from result_table \
+               group by lid having count(*) > 1) and did=" + str(i) + " and rejoin_link=0 group by lid, did, geom ORDER BY lid, did)"
+        uri.setDataSource("", sqlcall, "geom", "", "lid")
+        layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
+        QgsProject.instance().addMapLayer(layert)
+        if i == 1:
+            offset = 0
+        else:
+            offset = i - i * 0.7
+        print("i is " + str(i) + " and offset is:" + str(offset))
+        symbol = QgsLineSymbol.createSimple({'color': bad_color[i],
+                                             'width': '0.4',
+                                             'offset': str(offset)})
+        renderers = layert.renderer()
+        renderers.setSymbol(symbol.clone())
+        qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
+
+        # single_symbol_renderer = layert.renderer()
+        # symbol = single_symbol_renderer.symbol()
+        # symbol.setWidth(0.8)
+
+        #
+        # if i < len(color_list):
+        #     symbol.setColor(color_list[i])
+        #     layert.triggerRepaint()
+        #     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
+        #
         i = i + 1
 
-    feats = layert.getFeatures()
-    i=1
-    for feat in feats:
-        geom = feat.geometry()
-        geomSingleType = QgsWkbTypes.isSingleType(geom.wkbType())
-        if geom.type() == QgsWkbTypes.LineGeometry:
-            if geomSingleType:
-                x = geom.asPolyline()
-                #print("line:", x)
-            else:
-                x = geom.asMultiPolyline()
-                print([len(v) for v in x])
-                #print("multiline:", x)
+    # Start node
+    start_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,1)) AS start \
+           FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
+           FROM result_table WHERE did=1 and path_seq=1) As foo")
+    start_q.next()
+    layer = QgsVectorLayer('Point?crs=epsg:3006', 'Start', 'memory')
 
-    # for vert in x:
-    #     points.append(vert)
-    #     print(vert)
-    # print("number of points:"+str(len(points)))
-    # print(points[0][0])
-    # start_point = QgsPointXY(points[0][0])
-    # feat = QgsFeature()
-    # point_layer = QgsVectorLayer("Point?crs=epsg:3006", "point_layer", "memory")
-    # pr = point_layer.dataProvider()
-    # feat.setGeometry(QgsGeometry.fromPointXY(start_point))
-    # pr.addFeatures([feat])
-    # QgsProject.instance().addMapLayer(point_layer)
-    
-#    multilinestring = layert.getFeatures("route 1").geometry()
-#    first_part = multilinestring.geometryN(0)
-    
+    # Set the provider to accept the data source
+    prov = layer.dataProvider()
+
+    # Add a new feature and assign the geometry
+    feat = QgsFeature()
+    feat.setGeometry(QgsGeometry.fromWkt(start_q.value(1)))
+    prov.addFeatures([feat])
+
+    # Update extent of the layer
+    layer.updateExtents()
+
+    # Add the layer to the Layers panel
+    QgsProject.instance().addMapLayer(layer)
+
+    single_symbol_renderer = layer.renderer()
+    symbol = single_symbol_renderer.symbol()
+    symbol.setColor(QColor.fromRgb(0, 225, 0))
+    symbol.setSize(3)
+    # more efficient than refreshing the whole canvas, which requires a redraw of ALL layers
+    layer.triggerRepaint()
+    # update legend for layer
+    qgis.utils.iface.layerTreeView().refreshLayerSymbology(layer.id())
+
+
+    # End Node
+    end_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,-1)) AS start FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
+       FROM result_table  WHERE path_seq = (SELECT max(path_seq) FROM result_table WHERE did=1) and did=1) AS foo")
+    end_q.next()
+    layere = QgsVectorLayer('Point?crs=epsg:3006', 'END', 'memory')
+
+    # Set the provider to accept the data source
+    prov = layere.dataProvider()
+
+    # Add a new feature and assign the geometry
+    feat = QgsFeature()
+    feat.setGeometry(QgsGeometry.fromWkt(end_q.value(1)))
+    prov.addFeatures([feat])
+
+    # Update extent of the layer
+    layere.updateExtents()
+
+    # Add the layer to the Layers panel
+    QgsProject.instance().addMapLayer(layere)
+
+    single_symbol_renderer = layere.renderer()
+    symbol = single_symbol_renderer.symbol()
+    symbol.setColor(QColor.fromRgb(255, 0, 0))
+    symbol.setSize(3)
+
+    layer.triggerRepaint()
+    qgis.utils.iface.layerTreeView().refreshLayerSymbology(layere.id())
         
         
     
@@ -410,8 +594,8 @@ def main():
         removeRoutesLayers()
 
         # Create layer for one route set (run routeSetGeneration before).
-        #printRoutes()
-        printRoutesRejoin()
+        printRoutes()
+        #printRoutesRejoin()
 
         # Creates new visualisation layer for selected pairs (run selectedODResultTable before).
         #print_selected_pairs()

@@ -86,11 +86,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     cur.execute("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
-    cur.execute("CREATE TABLE IF NOT EXISTS all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-            node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-            link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-            end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-            speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+    cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, \
+               geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, \
+               speed numeric, fcn_class BIGINT)")
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
@@ -106,7 +104,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     # Result table creating
     cur.execute("DROP TABLE if exists result_table")
-    cur.execute("SELECT " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, 1 AS did,* INTO \
+    cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
+    geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class INTO \
     result_table FROM temp_table1")
 
     # Getting total cost for route 1 and setting first stop criterion.
@@ -134,7 +133,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     while True:
         #print("Route stop is ="+str(route_stop)+" and distance is ="+str(distance))
         if nr_routes >= 100:
-            print("Warning: The number of routes was over 10 for start zone: \
+            print("Warning: The number of routes was over 100 for start zone: \
             " + str(start_zone) + " and end zone: " + str(end_zone))
             break
 
@@ -184,15 +183,17 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         # pen_stop = pen_q.value(0)
 
         if comp(route_stop, route1_cost, threshold):
-            cur.execute("INSERT INTO result_table SELECT " + str(start_zone) + " AS start_zone, " + str(
-                end_zone) + " AS end_zone, " + str(
-                i) + " AS did,*  FROM temp_table2")
-            # Coverage calculation here.
+            cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
+                        + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node,path_seq, agg_cost, speed, fcn_class \
+                             FROM temp_table2")
+
             cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM result_table WHERE \
-            did="+str(i)+") AS per FROM (SELECT did,lid,geom FROM result_table WHERE did="+str(i)+" and lid = \
-            ANY(SELECT lid FROM result_table WHERE NOT did >= "+str(i)+") group by lid,did,geom) as foo")
+                        did=" + str(
+                i) + ")  AS per FROM (SELECT did,lid,geom FROM result_table WHERE did=" + str(i) + " and lid = \
+                        ANY(SELECT lid FROM result_table WHERE NOT did >= " + str(
+                i) + ") group by lid,did,geom) as foo")
             coverage = cur.fetchone()
-            #print("rutt " + str(i) + " " + str(coverage) + " länkar överlappar!")
+            print("rutt " + str(i) + " " + str(coverage) + " länkar överlappar!")
             cur.execute("SELECT SUM(ST_LENGTH(geom)) as total_length FROM temp_table2")
             distance = cur.fetchone()[0]
             cur.execute("DROP TABLE if exists temp_table1")
@@ -207,7 +208,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     #print("all results inserted")
 
 
-
     return nr_routes
 
 
@@ -216,11 +216,10 @@ def selectedODResultTable(start_list, end_list, my, threshold, removed_lids):
 
     nr_routes = []
     cur.execute("DROP TABLE if exists all_results")
-    cur.execute("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-    node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-    link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-    end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-    speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+    cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, start_node \
+               BIGINT, end_node BIGINT, \
+               geom geometry,cost double precision,link_cost DOUBLE PRECISION,path_seq INT,agg_cost DOUBLE PRECISION, \
+               speed numeric, fcn_class BIGINT)")
 
     # Table with removed lids so we can run python code without syncing to much with gis_layer_creation.
     cur.execute("DROP TABLE if exists removed_lids")
@@ -246,11 +245,10 @@ def allToAllResultTable(all_list, my, threshold, removed_lids):
 
     nr_routes = []
     cur.execute("DROP TABLE if exists all_results")
-    cur.execute("CREATE TABLE all_results(start_zone INT, end_zone INT,did INT, seq INT, path_seq INT, \
-    node BIGINT,edge BIGINT,cost DOUBLE PRECISION,agg_cost DOUBLE PRECISION, \
-    link_cost DOUBLE PRECISION, id INT, geom GEOMETRY, lid BIGINT, start_node BIGINT, \
-    end_node BIGINT,ref_lids CHARACTER VARYING,ordering CHARACTER VARYING, \
-    speed NUMERIC, lanes BIGINT, fcn_class BIGINT, internal CHARACTER VARYING)")
+    cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, start_node \
+               BIGINT, end_node BIGINT, \
+               geom geometry,cost double precision,link_cost DOUBLE PRECISION,path_seq INT,agg_cost DOUBLE PRECISION, \
+               speed numeric, fcn_class BIGINT)")
 
     for y in range(len(all_list)):
         for x in range(len(all_list)):
@@ -354,10 +352,10 @@ def route_set_lenght(nr_routes):
     return avg_len
 
 
-# OBSERVE some problems regarding when to put tube penalty
-def route_set_generation_rejoin(start_zone, end_zone, my, threshold, range):
+# OBSERVE
+def route_set_generation_rejoin(start_zone, end_zone, my, threshold):
 
-    print("TUBE IT UP! :"+str(range))
+    print("Rejoin IT UP! :")
 
     cur.execute("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
@@ -411,7 +409,7 @@ def route_set_generation_rejoin(start_zone, end_zone, my, threshold, range):
 
     # while comp(route_stop, route1_cost, threshold):
     while True:
-        if nr_routes >= 1:
+        if nr_routes >= 10:
             print("Warning: The number of routes was over 10 for start zone: \
             " + str(start_zone) + " and end zone: " + str(end_zone))
             break
@@ -430,7 +428,8 @@ def route_set_generation_rejoin(start_zone, end_zone, my, threshold, range):
         CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
         FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 10000 AS reverse_cost \
         FROM cost_table) AS subq LEFT JOIN \
-             (select lid as edge, CASE WHEN rejoin_link=0 THEN max(cost) + (max(cost)/(" + str(my) + " * " + str(route_stop) + "))*LN(" + str(delta) + ") ELSE max(cost)+max(cost)*0.5 END  AS cost \
+             (select lid as edge, CASE WHEN rejoin_link=0 THEN max(cost) + (max(cost)/(" + str(my) + " * " +
+                    str(route_stop) + "))*LN(" + str(delta) + ") ELSE max(cost)+max(cost)*0.5 END  AS cost \
         from result_table group by lid,rejoin_link) AS pen ON \
         (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
 
@@ -467,8 +466,8 @@ def route_set_generation_rejoin(start_zone, end_zone, my, threshold, range):
             # Coverage calculation here.
 
             cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM result_table WHERE \
-            did="+str(i)+" and rejoin_link = 0)  AS per FROM (SELECT did,lid,geom FROM result_table WHERE did="+str(i)+" and lid = \
-            ANY(SELECT lid FROM result_table WHERE NOT did >= "+str(i)+") group by lid,did,geom) as foo")
+                did="+str(i)+" and rejoin_link = 0)  AS per FROM (SELECT did,lid,geom FROM result_table WHERE did="+str(i)+" and lid = \
+                ANY(SELECT lid FROM result_table WHERE NOT did >= "+str(i)+") group by lid,did,geom) as foo")
             coverage = cur.fetchone()
             print("rutt " + str(i) + " " + str(coverage) + " länkar överlappar!")
 
@@ -500,12 +499,12 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.02
+    my = 0.01
     threshold = 1.25
 
     # Which zones to route between
-    start = 7515
-    end = 7724
+    start = 7128  # 7183
+    end = 6912  # 7543
 
     # Which zones in list to route between
     start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
@@ -534,9 +533,10 @@ def main():
     #     print("my is :" + str(my_list[j]) + " and average length is :" + str(len_rs) + " nr of routes is:"+str(nr_routes))
     #     j += 1
     cur.execute("DROP TABLE if exists all_results")
-    range = 1
-    route_set_generation_rejoin(start, end, my, threshold, range)
-    #routeSetGeneration(start, end, my, threshold)
+
+    #route_set_generation_rejoin(start, end, my, threshold)
+    routeSetGeneration(start, end, my, threshold)
+
     #onetoMany(6904)
 
     # Generate OD-pairs route sets between the zones in start_list and end_list

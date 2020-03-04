@@ -112,7 +112,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     cost_q = db.exec_("SELECT sum(link_cost) FROM temp_table1")
     cost_q.next()
     route1_cost = cost_q.value(0)
-    #print("Current cost route 1: " + str(route1_cost))
+    print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
     # # Pen cost as breaking if stuck instead of nr_routes
@@ -155,7 +155,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         route_stop = cost_q.value(0)
-        # print("Current cost route " + str(i) + ": " + str(route_stop))
+        print("Current cost route " + str(i) + ": " + str(route_stop))
 
         # print("difference is = " + str(route_stop / route1_cost))
 
@@ -923,16 +923,16 @@ def main():
         my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]
         #my_list = [0.05]
 
-        selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
+        #selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
         #excelStats(start_list, end_list, my_list,threshold)
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
 
-        start_zone = 7472
-        end_zone = 7556
+        start_zone = 7487
+        end_zone = 7282
 
-        # nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
-        # printRoutes(nr_routes)
+        nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
+        printRoutes(nr_routes)
 
 
         # ___________________________________________________________________________________________________________________
