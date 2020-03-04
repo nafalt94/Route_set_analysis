@@ -283,6 +283,7 @@ def printRoutesRejoin():
 
     layer.triggerRepaint()
     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layere.id())
+
         
         
     

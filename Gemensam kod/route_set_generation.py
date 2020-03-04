@@ -155,7 +155,11 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         route_stop = cost_q.value(0)
+<<<<<<< HEAD
         print("Current cost route " + str(i) + ": " + str(route_stop))
+=======
+        #print("Current cost route " + str(i) + ": " + str(route_stop))
+>>>>>>> b0885947026abb8064609002d2594be0b03222f4
 
         # print("difference is = " + str(route_stop / route1_cost))
 
@@ -896,8 +900,8 @@ def main():
         end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
 
         # Nya Långa OD-par
-        start_list = [7487, 7166,7721,7302]
-        end_list = [7282, 7506,7817,7782]
+        # start_list = [7487, 7166,7721,7302]
+        # end_list = [7282, 7506,7817,7782]
 
 
         list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
@@ -931,8 +935,13 @@ def main():
         start_zone = 7487
         end_zone = 7282
 
+<<<<<<< HEAD
         nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
         printRoutes(nr_routes)
+=======
+        #nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
+        # printRoutes(nr_routes)
+>>>>>>> b0885947026abb8064609002d2594be0b03222f4
 
 
         # ___________________________________________________________________________________________________________________
