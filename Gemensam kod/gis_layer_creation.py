@@ -69,19 +69,19 @@ def printRoutesRejoin():
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
-    feats = layert.getFeatures()
-    i=1
-    for feat in feats:
-        geom = feat.geometry()
-        geomSingleType = QgsWkbTypes.isSingleType(geom.wkbType())
-        if geom.type() == QgsWkbTypes.LineGeometry:
-            if geomSingleType:
-                x = geom.asPolyline()
-                #print("line:", x)
-            else:
-                x = geom.asMultiPolyline()
-                print([len(v) for v in x])
-                #print("multiline:", x)
+    #feats = layert.getFeatures()
+    # i=1
+    # for feat in feats:
+    #     geom = feat.geometry()
+    #     geomSingleType = QgsWkbTypes.isSingleType(geom.wkbType())
+    #     if geom.type() == QgsWkbTypes.LineGeometry:
+    #         if geomSingleType:
+    #             x = geom.asPolyline()
+    #             #print("line:", x)
+    #         else:
+    #             x = geom.asMultiPolyline()
+    #             #print([len(v) for v in x])
+    #             #print("multiline:", x)
 
     # for vert in x:
     #     points.append(vert)
