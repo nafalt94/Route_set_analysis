@@ -209,7 +209,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     return nr_routes
 
-
 # Generates result table for selected OD-pairs
 def selectedODResultTable(start_list, end_list, my, threshold, removed_lids):
 
@@ -349,8 +348,6 @@ def route_set_lenght(nr_routes):
 
     avg_len = temp_l / nr_routes
     return avg_len
-
-
 
 # OBSERVE
 def route_set_generation_rejoin(start_zone, end_zone, my, threshold):
@@ -734,7 +731,6 @@ def rejoinOverlapDifferentMy(start_zone, end_zone, my, threshold, range):
         return sum_overlap / (nr_routes - 1)
     else:
         return 0
-
 
 def excelStats(start_list,end_list,my_list,threshold,range, rejoin):
     cur.execute("DROP TABLE if exists all_results")
