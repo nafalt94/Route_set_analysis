@@ -155,11 +155,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         cost_q.next()
         route_stop = cost_q.value(0)
-<<<<<<< HEAD
-        print("Current cost route " + str(i) + ": " + str(route_stop))
-=======
+
         #print("Current cost route " + str(i) + ": " + str(route_stop))
->>>>>>> b0885947026abb8064609002d2594be0b03222f4
 
         # print("difference is = " + str(route_stop / route1_cost))
 

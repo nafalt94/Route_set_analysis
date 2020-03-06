@@ -225,6 +225,7 @@ def printRoutesRejoin():
         #
         i = i + 1
 
+
     # Start node
     start_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,1)) AS start \
            FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
