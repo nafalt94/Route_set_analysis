@@ -162,7 +162,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         route_stop = cur.fetchone()[0]
 
-        print("Current cost route " + str(i) + ": " + str(route_stop))
+        #print("Current cost route " + str(i) + ": " + str(route_stop))
 
         if comp(route_stop, route1_cost, threshold):
 
@@ -171,8 +171,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
                         "FROM (SELECT lid,geom FROM temp_table2 WHERE lid = "
                         "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
             overlap = cur.fetchone()[0]
-
-            if overlap < 1:
+            if overlap < 0.8:
                 cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
                         path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
