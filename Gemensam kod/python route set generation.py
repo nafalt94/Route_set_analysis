@@ -333,6 +333,7 @@ def routeSetGenerationStats(start_zone, end_zone, my, threshold):
     cur.execute("INSERT INTO all_results SELECT * FROM result_table")
     conn.commit()
 
+
     if nr_routes > 1:
         resar = [nr_routes, avg_coveragekm / (nr_routes-1), avg_coveragelid / (nr_routes-1), avg_coveragekm_shortest / (nr_routes-1)]
         #print(resar)
@@ -340,7 +341,7 @@ def routeSetGenerationStats(start_zone, end_zone, my, threshold):
     else:
         return [nr_routes,-1]
 
-# Generates result table for selected OD-pairs with removed lids
+
 def selectedODResultTable(start_list, end_list, my, threshold, removed_lids):
 
     nr_routes = []
@@ -479,8 +480,6 @@ def route_set_lenght(nr_routes):
 
     avg_len = temp_l / nr_routes
     return avg_len
-
-
 
 # OBSERVE
 def route_set_generation_rejoin(start_zone, end_zone, my, threshold):
@@ -866,7 +865,9 @@ def rejoinOverlapDifferentMy(start_zone, end_zone, my, threshold, range):
         return 0
 
 
+
 def excelStats(start_list, end_list, my_list, threshold, rejoin):
+
     cur.execute("DROP TABLE if exists all_results")
     #Overlap
     # j = 0

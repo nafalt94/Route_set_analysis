@@ -932,13 +932,9 @@ def main():
         start_zone = 7487
         end_zone = 7282
 
-<<<<<<< HEAD
-        nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
-        printRoutes(nr_routes)
-=======
+
         #nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
         # printRoutes(nr_routes)
->>>>>>> b0885947026abb8064609002d2594be0b03222f4
 
 
         # ___________________________________________________________________________________________________________________
