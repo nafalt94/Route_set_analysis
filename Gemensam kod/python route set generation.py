@@ -162,22 +162,34 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
         INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
         route_stop = cur.fetchone()[0]
 
-        #print("Current cost route " + str(i) + ": " + str(route_stop))
+        print("Current cost route " + str(i) + ": " + str(route_stop))
 
         if comp(route_stop, route1_cost, threshold):
-            cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
+
+            # Check if overlap for route is too high
+            cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM temp_table2 ) AS per "
+                        "FROM (SELECT lid,geom FROM temp_table2 WHERE lid = "
+                        "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
+            overlap = cur.fetchone()[0]
+
+            if overlap < 1:
+                cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
                         path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
-
+                i = i + 1
+                nr_routes = nr_routes + 1
+            else:
+                cur.execute(
+                    "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
+                    + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
+                                        path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
 
             cur.execute("DROP TABLE if exists temp_table1")
             cur.execute("SELECT * INTO temp_table1 from temp_table2")
-            i = i + 1
-            nr_routes = nr_routes + 1
         else:
             break
 
-    cur.execute("INSERT INTO all_results SELECT * FROM result_table")
+    cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
 
     conn.commit()
 
@@ -1141,6 +1153,11 @@ def main():
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
     start = 7704  # 7183
     end = 7705  # 7543
+
+    start_zone = 7815
+    end_zone = 7798
+    cur.execute("DROP TABLE if exists all_results")
+    routeSetGeneration(start_zone, end_zone, my, threshold)
 
 
     # Korta OD-par
