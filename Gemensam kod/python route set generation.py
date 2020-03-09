@@ -82,8 +82,9 @@ def genonenode(zone):
     return node
 
 # Route set generation who only adds to all results.
-def routeSetGeneration(start_zone, end_zone, my, threshold):
-    tic()
+
+def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
+
     cur.execute("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
     cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, \
@@ -92,8 +93,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
-    #print("Start zone is:"+str(start_zone))
-    #print("End zone is:"+str(end_zone))
+    print("Start zone is:"+str(start_zone))
+    print("End zone is:"+str(end_zone))
     #print("Start node is: "+str(start)+" End node is: "+str(end))
 
     cur.execute("DROP TABLE if exists temp_table1")
@@ -108,7 +109,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
 
     route1_cost = cur.fetchone()[0]
-    #print("Current cost route 1: " + str(route1_cost))
+    print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
 
@@ -182,23 +183,34 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
             #print("Current cost route " + str(i) + ": " + str(route_stop))
 
             if comp(route_stop, route1_cost, threshold):
-                cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
-                            + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
-                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my , 0 as time FROM temp_table2")
 
+                # Check if overlap for route is too high
+                cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM temp_table2 ) AS per "
+                            "FROM (SELECT lid,geom FROM temp_table2 WHERE lid = "
+                            "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
+                overlap = cur.fetchone()[0]
+
+                #Check if the overlap of a newly generated route is too high..
+                if overlap < max_overlap:
+                    cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
+                            + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
+                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
+                    i = i + 1
+                    nr_routes = nr_routes + 1
+                else:
+                    cur.execute(
+                        "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
+                        + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
+                                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my, 0 as time FROM temp_table2")
 
                 cur.execute("DROP TABLE if exists temp_table1")
                 cur.execute("SELECT * INTO temp_table1 from temp_table2")
-                i = i + 1
-                nr_routes = nr_routes + 1
             else:
                 break
         dummy = str(toc())
-        print("funkar inte tid?:",dummy)
-        cur.execute("UPDATE result_table SET time = "+dummy+" WHERE time=0")
-        cur.execute("INSERT INTO all_results SELECT * FROM result_table")
-
-        conn.commit()
+        print("funkar inte tid?:", dummy)
+        cur.execute("UPDATE result_table SET time = " + dummy + " WHERE time=0")
+        cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
 
 
 # Route set generation who returns some stats.
@@ -943,7 +955,7 @@ def excelStats(start_list, end_list, my_list, threshold, rejoin):
         j += 1
 
 # Generate route sets between start_list and end_list for differnet my values from my_list
-def populate_all_res(start_list,end_list,my_list,threshold):
+def populate_all_res(start_list,end_list,my_list,threshold, max_overlap):
 
     print("Generating all_results table")
     cur.execute("DROP TABLE if exists all_results")
@@ -952,7 +964,7 @@ def populate_all_res(start_list,end_list,my_list,threshold):
         i = 0
         while i < len(start_list):
 
-            routeSetGeneration(start_list[i], end_list[i], my_list[j], threshold)
+            routeSetGeneration(start_list[i], end_list[i], my_list[j], threshold, max_overlap)
             i += 1
 
         j += 1
@@ -1191,11 +1203,17 @@ def main():
     # Variable definitions
     my = 0.01
     threshold = 1.3
+    max_overlap  = 1
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
     start = 7487  # 7183
     end = 7282  # 7543
+
+    start_zone = 7128
+    end_zone = 6912
+    # cur.execute("DROP TABLE if exists all_results")
+    # routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
 
 
     # Korta OD-par
@@ -1249,7 +1267,7 @@ def main():
     end_list = generateRandomOd()[1]
 
     # Generate all results
-    populate_all_res(start_list, end_list,my_list,threshold)
+    populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
 
     #excelStats(start_list, end_list,my_list,threshold,0)
 
