@@ -3,6 +3,7 @@
 
 # Imports
 import time
+from datetime import datetime
 import psycopg2
 import numpy as np
 
@@ -29,7 +30,7 @@ def toc(tempBool=True):
     # Prints the time difference yielded by generator instance TicToc
     tempTimeInterval = next(TicToc)
     if tempBool:
-        print("Elapsed time: %f seconds.\n" % tempTimeInterval)
+        # print("Elapsed time: %f seconds.\n" % tempTimeInterval)
         return tempTimeInterval
 
 
@@ -93,9 +94,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
-    print("Start zone is:"+str(start_zone))
-    print("End zone is:"+str(end_zone))
-    print("Start node is: "+str(start)+" End node is: "+str(end))
+    # print("Start zone is:"+str(start_zone))
+    # print("End zone is:"+str(end_zone))
+    # print("Start node is: "+str(start)+" End node is: "+str(end))
 
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
@@ -109,7 +110,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
 
     route1_cost = cur.fetchone()[0]
-    print("Current cost route 1: " + str(route1_cost))
+    # print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
 
@@ -120,10 +121,10 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     if route_stop is None or reverse > 1000000:
     # Result table creating
         if route_stop is None:
-            print("No route BEFORE WHILE LOOP")
+            # print("No route BEFORE WHILE LOOP")
             cur.execute("DROP TABLE if exists result_table")
         else:
-            print("reverse activated to high!")
+            # print("reverse activated to high!")
             cur.execute("DROP TABLE if exists result_table")
     else:
         cur.execute("DROP TABLE if exists result_table")
@@ -180,7 +181,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
             route_stop = cur.fetchone()[0]
 
-            print("Current cost route " + str(i) + ": " + str(route_stop))
+            # print("Current cost route " + str(i) + ": " + str(route_stop))
 
 
             if comp(route_stop, route1_cost, threshold):
@@ -190,7 +191,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             "FROM (SELECT lid,geom FROM temp_table2 WHERE lid = "
                             "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
                 overlap = cur.fetchone()[0]
-                print(overlap)
                 #Check if the overlap of a newly generated route is too high..
                 if overlap < max_overlap:
                     cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
@@ -198,7 +198,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
                     i = i + 1
                     nr_routes = nr_routes + 1
-                    print("HÄR ÄR VI")
+                    # print("HÄR ÄR VI")
                 else:
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
@@ -210,7 +210,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             else:
                 break
         dummy = str(toc())
-        print("funkar inte tid?:", dummy)
         cur.execute("UPDATE result_table SET time = " + dummy )
         cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
         conn.commit()
@@ -899,7 +898,6 @@ def rejoinOverlapDifferentMy(start_zone, end_zone, my, threshold, range):
     else:
         return 0
 
-
 def excelStats(start_list, end_list, my_list, threshold, rejoin):
 
     cur.execute("DROP TABLE if exists all_results")
@@ -966,11 +964,16 @@ def populate_all_res(start_list,end_list,my_list,threshold, max_overlap):
     while j < len(my_list):
         i = 0
         while i < len(start_list):
-
             routeSetGeneration(start_list[i], end_list[i], my_list[j], threshold, max_overlap)
             i += 1
 
         j += 1
+
+        # datetime object containing current date and time
+        now = datetime.now()
+        # dd/mm/YY H:M:S
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        print(""+ str(j*100/len(my_list)) + "%  Progress and time is: " +  dt_string)
 
     # Index creation on all_result table
     cur.execute("CREATE INDEX all_res_geom_idx ON all_results USING GIST (geom)")
@@ -1003,8 +1006,8 @@ def getAveragesOD():
         # Loop for od-pairs
         for od in all_od:
             counter_done += 1
-            print("start", od[0])
-            print("end", od[1])
+            # print("start", od[0])
+            # print("end", od[1])
             # Variables to be inserted in the OD-pairs row
             avg_coveragekm = 0.0
             avg_coveragelid = 0.0
@@ -1035,7 +1038,7 @@ def getAveragesOD():
                     od[0]) + " and end_zone = " + str(od[1]) + " and \
                     my=" + str(my[0]))
                 temp_cost += cur.fetchone()[0]
-                print("temp cost is:", temp_cost)
+                # print("temp cost is:", temp_cost)
             avg_cost = temp_cost/nr_routes
             # #print("blir det rätt?", avg_cost)
 
@@ -1080,7 +1083,7 @@ def getAveragesOD():
                 #print("Coverage using lids is :", coveragelid/(nr_routes-1))
             else:
                 avg_coveragelid = -1
-                print("Only 1 route generated!")
+                # print("Only 1 route generated!")
 
             # Average cover using the most alike route in od-pair using length as comparison as coverage
             #
@@ -1150,7 +1153,7 @@ def getAveragesOD():
             #print("Add this to the database start = " + str(od[0]) + " end = " + str(od[1]) + " avg_ckm = "+str(avg_coveragekm)+" avg_clid = "+str(avg_coveragelid)+" avg_mlkm = "+str(avg_coveragemlkm) )
             #print("avg covrage against shorest",avg_coveragesrkm)
             #print("shortest route is :", shorest_route)
-            print("Inserting OD pair:", counter_done)
+            # print("Inserting OD pair:", counter_done)
             cur.execute("INSERT INTO my_od_res SELECT " + str(od[0]) + " AS start_zone, " + str(od[1]) + " AS start_zone, "
                         + str(my[0]) + " AS my, " + str(nr_routes) + " AS nr_routes, " + str(avg_coveragekm) +
                         " AS avg_cov_km, " + str(avg_coveragelid) + " AS avg_cov_lid," + str(avg_coveragemlkm) +
@@ -1278,8 +1281,9 @@ def main():
     start_list = generateRandomOd()[0]
     end_list = generateRandomOd()[1]
 
+
     # Generate all results
-    populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
+    #populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
 
     #excelStats(start_list, end_list,my_list,threshold,0)
 
