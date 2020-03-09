@@ -112,7 +112,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
 
     route1_cost = cur.fetchone()[0]
-    #print("Current cost route 1: " + str(route1_cost))
+    print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
     cur.execute("SELECT SUM(ST_LENGTH(geom)) as total_length FROM temp_table1")
@@ -171,6 +171,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                         "FROM (SELECT lid,geom FROM temp_table2 WHERE lid = "
                         "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
             overlap = cur.fetchone()[0]
+
+            #Check if the overlap of a newly generated route is too high..
             if overlap < max_overlap:
                 cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
@@ -1145,17 +1147,17 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.003
+    my = 0.01
     threshold = 1.3
-    max_overlap  = 1
+    max_overlap  = 0.8
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
     start = 7704  # 7183
     end = 7705  # 7543
 
-    start_zone = 7815
-    end_zone = 7798
+    start_zone = 7128
+    end_zone = 6912
     cur.execute("DROP TABLE if exists all_results")
     routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
 
