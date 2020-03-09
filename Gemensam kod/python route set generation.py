@@ -95,7 +95,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     end = genonenode(end_zone)
     print("Start zone is:"+str(start_zone))
     print("End zone is:"+str(end_zone))
-    #print("Start node is: "+str(start)+" End node is: "+str(end))
+    print("Start node is: "+str(start)+" End node is: "+str(end))
 
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
@@ -180,16 +180,17 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
             route_stop = cur.fetchone()[0]
 
-            #print("Current cost route " + str(i) + ": " + str(route_stop))
+            print("Current cost route " + str(i) + ": " + str(route_stop))
+
 
             if comp(route_stop, route1_cost, threshold):
 
                 # Check if overlap for route is too high
-                cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM temp_table2 ) AS per "
+                cur.execute("SELECT coalesce(sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM temp_table2 ),0) AS per "
                             "FROM (SELECT lid,geom FROM temp_table2 WHERE lid = "
                             "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
                 overlap = cur.fetchone()[0]
-
+                print(overlap)
                 #Check if the overlap of a newly generated route is too high..
                 if overlap < max_overlap:
                     cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
@@ -197,6 +198,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
                     i = i + 1
                     nr_routes = nr_routes + 1
+                    print("HÄR ÄR VI")
                 else:
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
@@ -208,9 +210,10 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             else:
                 break
         dummy = str(toc())
-        print("funkar inte tid?:", dummy)
+        #print("funkar inte tid?:", dummy)
         cur.execute("UPDATE result_table SET time = " + dummy + " WHERE time=0")
         cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
+        conn.commit()
 
 
 # Route set generation who returns some stats.
@@ -1027,12 +1030,11 @@ def getAveragesOD():
             temp_cost =0.0
             for x in range(1,int(nr_routes)+1):
                 #print("räknar jag rätt?",str(x))
-                cur.execute("SELECT agg_cost FROM all_results WHERE did=" + str(x) + " and start_zone = " + str(
+                cur.execute("SELECT sum(link_cost) FROM all_results WHERE did=" + str(x) + " and start_zone = " + str(
                     od[0]) + " and end_zone = " + str(od[1]) + " and \
-                    my=" + str(my[0]) + " and path_seq = (SELECT max(path_seq) from all_results WHERE \
-                    did=" + str(x) +" and start_zone = " + str(od[0]) + " and \
-                    end_zone = " + str(od[1]) + " and my =" + str(my[0]) + " )")
+                    my=" + str(my[0]))
                 temp_cost += cur.fetchone()[0]
+                print("temp cost is:", temp_cost)
             avg_cost = temp_cost/nr_routes
             # #print("blir det rätt?", avg_cost)
 
@@ -1042,9 +1044,9 @@ def getAveragesOD():
                 i = nr_routes
                 coveragekm = 0.0
                 while i > 1:
-                    cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
+                    cur.execute("SELECT coalesce(sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
                                 did=" + str(i) +" and start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
-                                and my = " + str(my[0]) + ") AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
+                                and my = " + str(my[0]) + "),0) AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
                                 did=" + str(i) + " and start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
                                 and my = " + str(my[0]) + " and lid = \
                                 ANY(SELECT lid FROM all_results WHERE NOT did >= " + str(i) + ") group by lid,did,geom)\
@@ -1090,10 +1092,10 @@ def getAveragesOD():
                     while j > 0:
                         #print("j is: "+str(j)+"  i is: "+str(i))
                         if j != i:
-                            cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
+                            cur.execute("SELECT coalesce(sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
                                                             did=" + str(i) + " and start_zone = " + str(
                                 od[0]) + " and end_zone=" + str(od[1]) + "\
-                                                            and my = " + str(my[0]) + ") AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
+                                                            and my = " + str(my[0]) + "),0) AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
                                                             did=" + str(i) + " and start_zone = " + str(
                                 od[0]) + " and end_zone=" + str(od[1]) + "\
                                                             and my = " + str(my[0]) + " and lid = \
@@ -1101,9 +1103,10 @@ def getAveragesOD():
                                                                                 as foo")
                             temp_ml = cur.fetchone()[0]
                             #print("overlap is:",temp_ml)
-                            if temp_ml is not None:
-                                if (temp_ml > most_like):
-                                    most_like = temp_ml
+
+
+                            if (temp_ml > most_like):
+                                most_like = temp_ml
 
 
 
@@ -1201,14 +1204,14 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.01
+    my = 0.001
     threshold = 1.3
-    max_overlap  = 1
+    max_overlap  = 1.0
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
-    start = 7487  # 7183
-    end = 7282  # 7543
+    start = 6961  # 7183
+    end = 8002  # 7543
 
     start_zone = 7128
     end_zone = 6912
@@ -1251,7 +1254,7 @@ def main():
 
 
     #route_set_generation_rejoin(start, end, my, threshold)
-    #routeSetGeneration(start, end, my, threshold)
+    #routeSetGeneration(start, end, my, threshold,max_overlap)
 
     #onetoMany(6904)
     #my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]
@@ -1267,7 +1270,7 @@ def main():
     end_list = generateRandomOd()[1]
 
     # Generate all results
-    populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
+    #populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
 
     #excelStats(start_list, end_list,my_list,threshold,0)
 
@@ -1282,7 +1285,7 @@ def main():
     print("Average lid coverage :" + str(getAllAverages(my_list)[3]))
     print("Average cost is :" + str(getAllAverages(my_list)[4]))
     print("Average shorest routes is :" + str(getAllAverages(my_list)[5]))
-
+    #
 
     #rejoin = 0 # = 1 if rejoin
     #excelStats(start_list, end_list, my_list, threshold,rejoin)
