@@ -30,6 +30,7 @@ def toc(tempBool=True):
     tempTimeInterval = next(TicToc)
     if tempBool:
         print("Elapsed time: %f seconds.\n" % tempTimeInterval)
+        return tempTimeInterval
 
 
 def tic():
@@ -82,31 +83,26 @@ def genonenode(zone):
 
 # Route set generation who only adds to all results.
 def routeSetGeneration(start_zone, end_zone, my, threshold):
-
+    tic()
     cur.execute("CREATE TABLE IF NOT EXISTS cost_table AS (select ST_Length(geom)/speed*3.6 AS link_cost, * \
     from model_graph)")
     cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, \
                geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, \
-               speed numeric, fcn_class BIGINT, my DOUBLE PRECISION)")
+               speed numeric, fcn_class BIGINT, my DOUBLE PRECISION, time DOUBLE PRECISION)")
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
-    print("Start zone is:"+str(start_zone))
-    print("End zone is:"+str(end_zone))
+    #print("Start zone is:"+str(start_zone))
+    #print("End zone is:"+str(end_zone))
     #print("Start node is: "+str(start)+" End node is: "+str(end))
 
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
     cur.execute("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
-     link_cost AS cost, 100000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
+     link_cost AS cost, 1000000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
      INNER JOIN cost_table ON(edge = lid)")
 
 
-    # Result table creating
-    cur.execute("DROP TABLE if exists result_table")
-    cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
-    geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class, "+str(my)+" as my INTO \
-    result_table FROM temp_table1")
 
     # Getting total cost for route 1 and setting first stop criterion.
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
@@ -115,71 +111,95 @@ def routeSetGeneration(start_zone, end_zone, my, threshold):
     #print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
-    cur.execute("SELECT SUM(ST_LENGTH(geom)) as total_length FROM temp_table1")
-    distance = cur.fetchone()[0]
 
 
-    # # Pen cost as breaking if stuck instead of nr_routes
-    # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
-    # pen_q.next()
-    # # print("Pencost för rutt: "+str(pen_q.value(0)))
-    # pen_stop = pen_q.value(0)
+    cur.execute("SELECT max(agg_cost) FROM temp_table1")
+    reverse = cur.fetchone()[0]
 
-    # Calculationg alternative routes
-    i = 2
-    nr_routes = 1
-
-    # while comp(route_stop, route1_cost, threshold):
-    while True:
-        #print("Route stop is ="+str(route_stop)+" and distance is ="+str(distance))
-        if nr_routes >= 100 or route_stop is None:
-            print("Warning: The number of routes was over 100 for start zone: \
-            " + str(start_zone) + " and end zone: " + str(end_zone))
-            break
-
-        # Calculating penalizing term (P. 14 in thesis work)
-        # Delta value
-        cur.execute("Select COUNT(*) from result_table")
-        delta = cur.fetchone()[0]
-
-        #print("DELTA VALUE IS =:"+str(delta))
-        # Parameter
-
-        # Route 2
-        cur.execute("DROP TABLE if exists temp_table2")
-
-        # Normal penalty
-        cur.execute("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
-        CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
-        FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 100000 AS reverse_cost \
-        FROM cost_table) AS subq LEFT JOIN \
-            (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * " + str(route_stop) + "))*LN(" + str(delta) + ") AS cost \
-        from result_table group by lid ) AS pen ON \
-        (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
-
-        # Saving route cost without penalty and updating route_stop.
-        cur.execute("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
-        INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
-        route_stop = cur.fetchone()[0]
-
-        #print("Current cost route " + str(i) + ": " + str(route_stop))
-
-        if comp(route_stop, route1_cost, threshold):
-            cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
-                        + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
-                        path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
-
-
-            cur.execute("DROP TABLE if exists temp_table1")
-            cur.execute("SELECT * INTO temp_table1 from temp_table2")
-            i = i + 1
-            nr_routes = nr_routes + 1
+    if route_stop is None or reverse > 1000000:
+    # Result table creating
+        if route_stop is None:
+            print("No route BEFORE WHILE LOOP")
+            cur.execute("DROP TABLE if exists result_table")
         else:
-            break
+            print("reverse activated to high!")
+            cur.execute("DROP TABLE if exists result_table")
+    else:
+        cur.execute("DROP TABLE if exists result_table")
+        cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
+        geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class, "+str(my)+" as my, 0 as time INTO \
+        result_table FROM temp_table1")
 
-    cur.execute("INSERT INTO all_results SELECT * FROM result_table")
+        # # Pen cost as breaking if stuck instead of nr_routes
+        # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
+        # pen_q.next()
+        # # print("Pencost för rutt: "+str(pen_q.value(0)))
+        # pen_stop = pen_q.value(0)
 
-    conn.commit()
+        # Calculationg alternative routes
+        i = 2
+        nr_routes = 1
+
+        # while comp(route_stop, route1_cost, threshold):
+        while True:
+            #print("Route stop is ="+str(route_stop)+" and distance is ="+str(distance))
+            if nr_routes >= 1000 or route_stop is None or route_stop > 1000000:
+                if nr_routes >= 100:
+                    print("Warning: The number of routes was over 100 for start zone: \
+                    " + str(start_zone) + " and end zone: " + str(end_zone))
+                if route_stop is None:
+                    print("No route between zone "+str(start_zone)+" and zone "+str(end_zone))
+                if route_stop is not None:
+                    if route_stop >= 1000000:
+                        print("Warning reverse cost used in the while loop")
+                break
+
+            # Calculating penalizing term (P. 14 in thesis work)
+            # Delta value
+            cur.execute("Select COUNT(*) from result_table")
+            delta = cur.fetchone()[0]
+
+            #print("DELTA VALUE IS =:"+str(delta))
+            # Parameter
+
+            # Route 2
+            cur.execute("DROP TABLE if exists temp_table2")
+
+            # Normal penalty
+            cur.execute("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
+            CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
+            FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000000 AS reverse_cost \
+            FROM cost_table) AS subq LEFT JOIN \
+                (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * " + str(route_stop) + "))*LN(" + str(delta) + ") AS cost \
+            from result_table group by lid ) AS pen ON \
+            (subq.id = pen.edge)'," + str(start) + "," + str(end) + ") INNER JOIN cost_table ON(edge = lid)")
+
+            # Saving route cost without penalty and updating route_stop.
+            cur.execute("SELECT SUM(cost_table.link_cost) AS tot_cost FROM temp_table2 \
+            INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
+            route_stop = cur.fetchone()[0]
+
+            #print("Current cost route " + str(i) + ": " + str(route_stop))
+
+            if comp(route_stop, route1_cost, threshold):
+                cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
+                            + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
+                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my , 0 as time FROM temp_table2")
+
+
+                cur.execute("DROP TABLE if exists temp_table1")
+                cur.execute("SELECT * INTO temp_table1 from temp_table2")
+                i = i + 1
+                nr_routes = nr_routes + 1
+            else:
+                break
+        dummy = str(toc())
+        print("funkar inte tid?:",dummy)
+        cur.execute("UPDATE result_table SET time = "+dummy+" WHERE time=0")
+        cur.execute("INSERT INTO all_results SELECT * FROM result_table")
+
+        conn.commit()
+
 
 # Route set generation who returns some stats.
 def routeSetGenerationStats(start_zone, end_zone, my, threshold):
@@ -865,7 +885,6 @@ def rejoinOverlapDifferentMy(start_zone, end_zone, my, threshold, range):
         return 0
 
 
-
 def excelStats(start_list, end_list, my_list, threshold, rejoin):
 
     cur.execute("DROP TABLE if exists all_results")
@@ -932,15 +951,21 @@ def populate_all_res(start_list,end_list,my_list,threshold):
     while j < len(my_list):
         i = 0
         while i < len(start_list):
+
             routeSetGeneration(start_list[i], end_list[i], my_list[j], threshold)
             i += 1
 
         j += 1
 
+    # Index creation on all_result table
+    cur.execute("CREATE INDEX all_res_geom_idx ON all_results USING GIST (geom)")
+    cur.execute("CREATE INDEX all_res_id_idx on all_results (lid)")
+    cur.execute("CREATE INDEX all_res_start_end_idx on all_results (start_zone, end_zone)")
+
     print("table all_results FINISHED!")
 
 # Insert average values into my_od_res from all_results
-def getAverages():
+def getAveragesOD():
     print("STARTING TO GENERATE AVERAGES")
     cur.execute("DROP TABLE my_od_res")
     cur.execute("CREATE TABLE my_od_res(start_zone BIGINT, end_zone BIGINT, my DOUBLE PRECISION, nr_routes BIGINT,\
@@ -963,8 +988,8 @@ def getAverages():
         # Loop for od-pairs
         for od in all_od:
             counter_done += 1
-            #print("start", od[0])
-            #print("end", od[1])
+            print("start", od[0])
+            print("end", od[1])
             # Variables to be inserted in the OD-pairs row
             avg_coveragekm = 0.0
             avg_coveragelid = 0.0
@@ -1023,58 +1048,62 @@ def getAverages():
                 avg_coveragekm = -1
                 #print("Only 1 route generated!")
             #
-            # Average cover in lids for routes in od-pair.
+            #Average cover in lids for routes in od-pair.
 
-            # if nr_routes > 1:
-            #     i = nr_routes
-            #     coveragelid = 0.0
-            #     while i > 1:
-            #         cur.execute("SELECT cast(count(*) as float) / (SELECT COUNT(*) FROM all_results WHERE did=" + str(i) + " and my=" + str(my[0]) + ") AS per \
-            #                                 FROM (SELECT did,lid FROM all_results WHERE did=" + str(i) + " and lid = ANY(SELECT lid FROM all_results \
-            #                                 WHERE NOT did >= " + str(i) + ") group by lid,did) as foo")
-            #         current = cur.fetchone()[0]
-            #         coveragelid += current
-            #
-            #         i -= 1
-            #     avg_coveragelid = coveragelid/(nr_routes-1)
-            #     #print("Coverage using lids is :", coveragelid/(nr_routes-1))
-            # else:
-            #     avg_coveragelid = -1
-                #print("Only 1 route generated!")
+            if nr_routes > 1:
+                i = nr_routes
+                coveragelid = 0.0
+                while i > 1:
+                    cur.execute("SELECT cast(count(*) as float) / (SELECT COUNT(*) FROM all_results WHERE did=" + str(i) + " and my=" + str(my[0]) + ") AS per \
+                                            FROM (SELECT did,lid FROM all_results WHERE did=" + str(i) + " and lid = ANY(SELECT lid FROM all_results \
+                                            WHERE NOT did >= " + str(i) + ") group by lid,did) as foo")
+                    current = cur.fetchone()[0]
+                    coveragelid += current
+
+                    i -= 1
+                avg_coveragelid = coveragelid/(nr_routes-1)
+                #print("Coverage using lids is :", coveragelid/(nr_routes-1))
+            else:
+                avg_coveragelid = -1
+                print("Only 1 route generated!")
 
             # Average cover using the most a like route in od-pair using length as comparison as coverage
             #
-            # if nr_routes > 1:
-            #     i = nr_routes
-            #     coveragemlkm = 0.0
-            #     while i > 1:
-            #         most_like = 0.0
-            #         j = nr_routes
-            #         while j > 0:
-            #             #print("j is: "+str(j)+"  i is: "+str(i))
-            #             if j != i:
-            #                 cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
-            #                                                 did=" + str(i) + " and start_zone = " + str(
-            #                     od[0]) + " and end_zone=" + str(od[1]) + "\
-            #                                                 and my = " + str(my[0]) + ") AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
-            #                                                 did=" + str(i) + " and start_zone = " + str(
-            #                     od[0]) + " and end_zone=" + str(od[1]) + "\
-            #                                                 and my = " + str(my[0]) + " and lid = \
-            #                                                 ANY(SELECT lid FROM all_results WHERE did = " + str(j) + ") group by lid,did,geom)\
-            #                                                                     as foo")
-            #                 temp_ml = cur.fetchone()[0]
-            #                 #print("overlap is:",temp_ml)
-            #                 if (temp_ml > most_like):
-            #                     most_like = temp_ml
-            #             j -= 1
-            #         #print("Most like for did="+str(i)+" is:", most_like)
-            #         coveragemlkm += most_like
-            #         i -= 1
-            #     avg_coveragemlkm = coveragemlkm / (nr_routes - 1)
-            #     #print("Coverage using most like length is :", coveragemlkm / (nr_routes - 1))
-            # else:
-            #     avg_coveragemlkm = -1
-            #     #print("Only 1 route generated!")
+            if nr_routes > 1:
+                i = nr_routes
+                coveragemlkm = 0.0
+                while i > 1:
+                    most_like = 0.0
+                    j = nr_routes
+                    while j > 0:
+                        #print("j is: "+str(j)+"  i is: "+str(i))
+                        if j != i:
+                            cur.execute("SELECT sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
+                                                            did=" + str(i) + " and start_zone = " + str(
+                                od[0]) + " and end_zone=" + str(od[1]) + "\
+                                                            and my = " + str(my[0]) + ") AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
+                                                            did=" + str(i) + " and start_zone = " + str(
+                                od[0]) + " and end_zone=" + str(od[1]) + "\
+                                                            and my = " + str(my[0]) + " and lid = \
+                                                            ANY(SELECT lid FROM all_results WHERE did = " + str(j) + ") group by lid,did,geom)\
+                                                                                as foo")
+                            temp_ml = cur.fetchone()[0]
+                            #print("overlap is:",temp_ml)
+                            if temp_ml is not None:
+                                if (temp_ml > most_like):
+                                    most_like = temp_ml
+
+
+
+                        j -= 1
+                    #print("Most like for did="+str(i)+" is:", most_like)
+                    coveragemlkm += most_like
+                    i -= 1
+                avg_coveragemlkm = coveragemlkm / (nr_routes - 1)
+                #print("Coverage using most like length is :", coveragemlkm / (nr_routes - 1))
+            else:
+                avg_coveragemlkm = -1
+                #print("Only 1 route generated!")
 
             # Average cover to shorest using km.
             # if nr_routes >1:
@@ -1107,9 +1136,35 @@ def getAverages():
                         " AS avg_cov_mlkm, " + str(avg_coveragesrkm) + " AS avg_cov_srkm, " + str(shortest_route) +
                         " AS sr_cost, " + str(avg_cost) + " AS avg_cost")
 
+# Average of averages for each my value.
+def getAllAverages(my_list):
+
+    average_nr = []
+    average_cov_km = []
+    average_cost = []
+    average_sr_cost = []
+    average_mlkm = []
+    average_cov_lid = []
+    for x in my_list:
+        cur.execute("SELECT AVG(nr_routes) FROM my_od_res WHERE my = " + str(x))
+        average_nr.append(cur.fetchone()[0])
+        cur.execute("SELECT AVG(avg_cov_km) FROM my_od_res WHERE my = " + str(x)+" and avg_cov_km >= 0")
+        average_cov_km.append(cur.fetchone()[0])
+        cur.execute("SELECT AVG(avg_cost) FROM my_od_res WHERE my = " + str(x))
+        average_cost.append(cur.fetchone()[0])
+        cur.execute("SELECT AVG(sr_cost) FROM my_od_res WHERE my = " + str(x) )
+        average_sr_cost.append(cur.fetchone()[0])
+        cur.execute("SELECT AVG(avg_cov_mlkm) FROM my_od_res WHERE my = " + str(x) +" and avg_cov_mlkm >= 0")
+        average_mlkm.append(cur.fetchone()[0])
+        cur.execute("SELECT AVG(avg_cov_lid) FROM my_od_res WHERE my = " + str(x) + " and avg_cov_lid >= 0")
+        average_cov_lid.append(cur.fetchone()[0])
+
+    return average_nr, average_cov_km, average_mlkm, average_cov_lid, average_cost, average_sr_cost
+
+
 def generateRandomOd():
     cur.execute("DROP TABLE IF EXISTS rand_od")
-    cur.execute("CREATE TABLE rand_od AS SELECT * FROM od_lid ORDER BY RANDOM()")
+    cur.execute("CREATE TABLE rand_od AS SELECT * FROM od_lid ORDER BY RANDOM() LIMIT 100")
     cur.execute("ALTER TABLE rand_od ADD rand_id serial")
     cur.execute("SELECT * FROM rand_od")
     dummy = cur.fetchall()
@@ -1134,13 +1189,13 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.003
+    my = 0.01
     threshold = 1.3
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
-    start = 7704  # 7183
-    end = 7705  # 7543
+    start = 7487  # 7183
+    end = 7282  # 7543
 
 
     # Korta OD-par
@@ -1178,7 +1233,7 @@ def main():
 
 
     #route_set_generation_rejoin(start, end, my, threshold)
-    #routeSetGenerationStats(start, end, my, threshold)
+    #routeSetGeneration(start, end, my, threshold)
 
     #onetoMany(6904)
     #my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]
@@ -1188,18 +1243,27 @@ def main():
     start_list = [7472, 7472, 7472]
     end_list = [7556, 6912, 6822]
     ## AVERAGES TEST
-    my_list = [0.003, 0.005]
+    my_list = [0.001, 0.005, 0.01]
     randomlist = []
     start_list = generateRandomOd()[0]
     end_list = generateRandomOd()[1]
 
     # Generate all results
-    #populate_all_res(start_list, end_list,my_list,threshold)
+    populate_all_res(start_list, end_list,my_list,threshold)
 
     #excelStats(start_list, end_list,my_list,threshold,0)
 
-    # Gen avg od result
-    #getAverages()
+    # Gen avg od result creates table my_od_res
+    getAveragesOD()
+
+    # Gen average for all od-pairs
+    getAllAverages(my_list)
+    print("Average nr routes is :" + str(getAllAverages(my_list)[0]))
+    print("Average coverage km is :" + str(getAllAverages(my_list)[1]))
+    print("Average most like coverage :" + str(getAllAverages(my_list)[2]))
+    print("Average lid coverage :" + str(getAllAverages(my_list)[3]))
+    print("Average cost is :" + str(getAllAverages(my_list)[4]))
+    print("Average shorest routes is :" + str(getAllAverages(my_list)[5]))
 
 
     #rejoin = 0 # = 1 if rejoin
