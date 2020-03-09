@@ -128,7 +128,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     else:
         cur.execute("DROP TABLE if exists result_table")
         cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
-        geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class, "+str(my)+" as my, 0 as time INTO \
+        geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class, "+str(my)+" as my, 0.0 as time INTO \
         result_table FROM temp_table1")
 
         # # Pen cost as breaking if stuck instead of nr_routes
@@ -203,15 +203,15 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
-                                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my, 0 as time FROM temp_table2")
+                                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my, 0.0 as time FROM temp_table2")
 
                 cur.execute("DROP TABLE if exists temp_table1")
                 cur.execute("SELECT * INTO temp_table1 from temp_table2")
             else:
                 break
         dummy = str(toc())
-        #print("funkar inte tid?:", dummy)
-        cur.execute("UPDATE result_table SET time = " + dummy + " WHERE time=0")
+        print("funkar inte tid?:", dummy)
+        cur.execute("UPDATE result_table SET time = " + dummy )
         cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
         conn.commit()
 
@@ -976,16 +976,16 @@ def populate_all_res(start_list,end_list,my_list,threshold, max_overlap):
     cur.execute("CREATE INDEX all_res_geom_idx ON all_results USING GIST (geom)")
     cur.execute("CREATE INDEX all_res_id_idx on all_results (lid)")
     cur.execute("CREATE INDEX all_res_start_end_idx on all_results (start_zone, end_zone)")
-
+    conn.commit()
     print("table all_results FINISHED!")
 
 # Insert average values into my_od_res from all_results
 def getAveragesOD():
     print("STARTING TO GENERATE AVERAGES")
-    cur.execute("DROP TABLE my_od_res")
+    cur.execute("DROP TABLE if exists my_od_res")
     cur.execute("CREATE TABLE my_od_res(start_zone BIGINT, end_zone BIGINT, my DOUBLE PRECISION, nr_routes BIGINT,\
      avg_cov_km DOUBLE PRECISION, avg_cov_lid DOUBLE PRECISION, avg_cov_mlkm DOUBLE PRECISION, \
-     avg_cov_srkm DOUBLE PRECISION, sr_cost DOUBLE PRECISION, avg_cost DOUBLE PRECISION)")
+     avg_cov_srkm DOUBLE PRECISION, sr_cost DOUBLE PRECISION, avg_cost DOUBLE PRECISION, time DOUBLE PRECISION)")
 
     # Get od-pairs
     cur.execute("SELECT DISTINCT start_zone, end_zone FROM all_results")
@@ -1013,6 +1013,7 @@ def getAveragesOD():
             nr_routes = 0.0
             avg_cost = 0.0
             shortest_route = 0.0
+            time = 0.0
 
             # Nr routes for OD-pair.
             cur.execute("select max(did) as nr_routes from all_results WHERE my=" + str(my[0]) + " and start_zone="
@@ -1081,7 +1082,7 @@ def getAveragesOD():
                 avg_coveragelid = -1
                 print("Only 1 route generated!")
 
-            # Average cover using the most a like route in od-pair using length as comparison as coverage
+            # Average cover using the most alike route in od-pair using length as comparison as coverage
             #
             if nr_routes > 1:
                 i = nr_routes
@@ -1120,6 +1121,11 @@ def getAveragesOD():
                 avg_coveragemlkm = -1
                 #print("Only 1 route generated!")
 
+            # Time for OD-pair
+            cur.execute("SELECT time from all_results where start_zone = " + str(od[0]) + " and end_zone="
+                        + str(od[1]) + " and my = " + str(my[0]) + " group by start_zone, end_zone, my,time")
+            time = cur.fetchone()[0]
+
             # Average cover to shorest using km.
             # if nr_routes >1:
             #     i = nr_routes
@@ -1149,7 +1155,7 @@ def getAveragesOD():
                         + str(my[0]) + " AS my, " + str(nr_routes) + " AS nr_routes, " + str(avg_coveragekm) +
                         " AS avg_cov_km, " + str(avg_coveragelid) + " AS avg_cov_lid," + str(avg_coveragemlkm) +
                         " AS avg_cov_mlkm, " + str(avg_coveragesrkm) + " AS avg_cov_srkm, " + str(shortest_route) +
-                        " AS sr_cost, " + str(avg_cost) + " AS avg_cost")
+                        " AS sr_cost, " + str(avg_cost) + " AS avg_cost, " + str(time) + "AS time")
 
 # Average of averages for each my value.
 def getAllAverages(my_list):
@@ -1160,6 +1166,7 @@ def getAllAverages(my_list):
     average_sr_cost = []
     average_mlkm = []
     average_cov_lid = []
+    average_time = []
     for x in my_list:
         cur.execute("SELECT AVG(nr_routes) FROM my_od_res WHERE my = " + str(x))
         average_nr.append(cur.fetchone()[0])
@@ -1173,13 +1180,15 @@ def getAllAverages(my_list):
         average_mlkm.append(cur.fetchone()[0])
         cur.execute("SELECT AVG(avg_cov_lid) FROM my_od_res WHERE my = " + str(x) + " and avg_cov_lid >= 0")
         average_cov_lid.append(cur.fetchone()[0])
+        cur.execute("SELECT AVG(time) FROM my_od_res WHERE my = " + str(x) + " and avg_cov_lid >= 0")
+        average_time.append(cur.fetchone()[0])
 
-    return average_nr, average_cov_km, average_mlkm, average_cov_lid, average_cost, average_sr_cost
+    return average_nr, average_cov_km, average_mlkm, average_cov_lid, average_cost, average_sr_cost,average_time
 
 
 def generateRandomOd():
     cur.execute("DROP TABLE IF EXISTS rand_od")
-    cur.execute("CREATE TABLE rand_od AS SELECT * FROM od_lid ORDER BY RANDOM() LIMIT 100")
+    cur.execute("CREATE TABLE rand_od AS SELECT * FROM od_lid ORDER BY RANDOM() LIMIT 10")
     cur.execute("ALTER TABLE rand_od ADD rand_id serial")
     cur.execute("SELECT * FROM rand_od")
     dummy = cur.fetchall()
@@ -1264,13 +1273,13 @@ def main():
     start_list = [7472, 7472, 7472]
     end_list = [7556, 6912, 6822]
     ## AVERAGES TEST
-    my_list = [0.001, 0.005, 0.01]
+    my_list = [0.001, 0.005, 0.01,0.02,0.03,0.05]
     randomlist = []
     start_list = generateRandomOd()[0]
     end_list = generateRandomOd()[1]
 
     # Generate all results
-    #populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
+    populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
 
     #excelStats(start_list, end_list,my_list,threshold,0)
 
@@ -1285,6 +1294,7 @@ def main():
     print("Average lid coverage :" + str(getAllAverages(my_list)[3]))
     print("Average cost is :" + str(getAllAverages(my_list)[4]))
     print("Average shorest routes is :" + str(getAllAverages(my_list)[5]))
+    print("Average time is :" + str(getAllAverages(my_list)[6]))
     #
 
     #rejoin = 0 # = 1 if rejoin
