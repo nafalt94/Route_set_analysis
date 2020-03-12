@@ -3,6 +3,7 @@
 
 # Imports
 import time
+import sys
 from datetime import datetime
 import psycopg2
 import numpy as np
@@ -213,7 +214,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         cur.execute("UPDATE result_table SET time = " + dummy )
         cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
         conn.commit()
-
 
 # Route set generation who returns some stats.
 def routeSetGenerationStats(start_zone, end_zone, my, threshold):
@@ -960,25 +960,39 @@ def populate_all_res(start_list,end_list,my_list,threshold, max_overlap):
 
     print("Generating all_results table")
     cur.execute("DROP TABLE if exists all_results")
+
     j = 0
     while j < len(my_list):
         i = 0
+        kvot = 10
+        progress = len(start_list) / kvot
+        prog_count = kvot
         while i < len(start_list):
-            routeSetGeneration(start_list[i], end_list[i], my_list[j], threshold, max_overlap)
-            i += 1
+            if i >= progress:
+                print(""+ str(prog_count) + "% delprocess klar... ")
+                prog_count = prog_count + kvot
+                progress = progress + len(start_list)/kvot
 
+            try:
+                routeSetGeneration(start_list[i], end_list[i], my_list[j], threshold, max_overlap)
+            except:  # catch *all* exceptions
+                print("Route set generation failed..")
+
+            i += 1
         j += 1
 
         # datetime object containing current date and time
         now = datetime.now()
         # dd/mm/YY H:M:S
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        print(""+ str(j*100/len(my_list)) + "%  Progress and time is: " +  dt_string)
+        print(""+ str(j*100/len(my_list)) + "%  klart and time is: " +  dt_string)
 
     # Index creation on all_result table
     cur.execute("CREATE INDEX all_res_geom_idx ON all_results USING GIST (geom)")
     cur.execute("CREATE INDEX all_res_id_idx on all_results (lid)")
     cur.execute("CREATE INDEX all_res_start_end_idx on all_results (start_zone, end_zone)")
+    cur.execute("CREATE INDEX all_res_start_end_my_idx on all_results (start_zone, end_zone,my)")
+    cur.execute("CREATE INDEX did_idx on all_results (did)")
     conn.commit()
     print("table all_results FINISHED!")
 
@@ -1054,7 +1068,7 @@ def getAveragesOD():
                                 did=" + str(i) + " and start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
                                 and my = " + str(my[0]) + " and lid = \
                                 ANY(SELECT lid FROM all_results WHERE start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
-                                and my = " + str(my[0])+" and NOT did >= " + str(i) + ") group by lid,did,geom)\
+                                and my = " + str(my[0]) + " and NOT did >= " + str(i) + ") group by lid,did,geom)\
                                                     as foo")
 
                     current = cur.fetchone()[0]
@@ -1069,6 +1083,7 @@ def getAveragesOD():
             #
 
             #Average cover in lids for routes in od-pair.
+            #
 
             # if nr_routes > 1:
             #     i = nr_routes
@@ -1087,8 +1102,8 @@ def getAveragesOD():
             #     avg_coveragelid = -1
                 # print("Only 1 route generated!")
 
-            # Average cover using the most alike route in od-pair using length as comparison as coverage
-            #
+            # # Average cover using the most alike route in od-pair using length as comparison as coverage
+            # #
             # if nr_routes > 1:
             #     i = nr_routes
             #     coveragemlkm = 0.0
@@ -1125,8 +1140,10 @@ def getAveragesOD():
             # else:
             #     avg_coveragemlkm = -1
             #     #print("Only 1 route generated!")
-            #
-            # # Time for OD-pair
+
+
+            # Time for OD-pair
+
             cur.execute("SELECT time from all_results where start_zone = " + str(od[0]) + " and end_zone="
                         + str(od[1]) + " and my = " + str(my[0]) + " group by start_zone, end_zone, my,time")
             time = cur.fetchone()[0]
@@ -1213,7 +1230,9 @@ def generateRandomOd():
 
 # Connection global to be used everywhere.
 conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123")
+conn.autocommit = True
 cur = conn.cursor()
+
 
 def main():
     tic()
@@ -1221,7 +1240,7 @@ def main():
     # Variable definitions
     my = 0.001
     threshold = 1.3
-    max_overlap  = 1.0
+    max_overlap  = 0.8
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
@@ -1282,20 +1301,24 @@ def main():
     ## AVERAGES TEST
     my_list = [0.001, 0.005, 0.01, 0.02, 0.03, 0.05]
     randomlist = []
-    #start_list = generateRandomOd()[0]
-    #end_list = generateRandomOd()[1]
+
+    # start_list = generateRandomOd()[0]
+    # end_list = generateRandomOd()[1]
+
 
 
     # Generate all results
-    #populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
+    # populate_all_res(start_list, end_list,my_list,threshold, max_overlap)
 
     #excelStats(start_list, end_list,my_list,threshold,0)
 
     # Gen avg od result creates table my_od_res
-    #getAveragesOD()
 
-    # Gen average for all od-pairs
-    getAllAverages(my_list)
+    # getAveragesOD()
+
+    #
+    # # Gen average for all od-pairs
+    # getAllAverages(my_list)
     # print("Average nr routes is :" + str(getAllAverages(my_list)[0]))
     # print("Average coverage km is :" + str(getAllAverages(my_list)[1]))
     # print("Average most like coverage :" + str(getAllAverages(my_list)[2]))
@@ -1303,7 +1326,7 @@ def main():
     # print("Average cost is :" + str(getAllAverages(my_list)[4]))
     # print("Average shorest routes is :" + str(getAllAverages(my_list)[5]))
     # print("Average time is :" + str(getAllAverages(my_list)[6]))
-    #
+
 
     #rejoin = 0 # = 1 if rejoin
     #excelStats(start_list, end_list, my_list, threshold,rejoin)
