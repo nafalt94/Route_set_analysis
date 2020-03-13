@@ -182,7 +182,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
             route_stop = cur.fetchone()[0]
 
-            # print("Current cost route " + str(i) + ": " + str(route_stop))
+            print("Current cost route " + str(i) + ": " + str(route_stop))
 
 
             if comp(route_stop, route1_cost, threshold):
@@ -1238,14 +1238,16 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.001
+    my = 0.05
     threshold = 1.3
-    max_overlap  = 0.8
+    max_overlap  = 1
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
-    start = 6961  # 7183
-    end = 8002  # 7543
+    start = 7128  # 7183
+    end = 6912  # 7543
+
+
 
     start_zone = 7774
     end_zone = 7636
@@ -1289,7 +1291,7 @@ def main():
 
 
     #route_set_generation_rejoin(start, end, my, threshold)
-    routeSetGeneration(start, end, my, threshold,max_overlap)
+    routeSetGeneration(start, end, my, threshold, max_overlap)
 
     #onetoMany(6904)
     #my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]

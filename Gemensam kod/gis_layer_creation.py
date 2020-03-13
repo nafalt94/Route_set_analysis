@@ -4,7 +4,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtSql import *
 from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
-
+from shapely import wkb
 
 
 print(__name__)
@@ -38,7 +38,7 @@ def removeRoutesLayers():
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
-            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid":
+            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid" and str(layer.name()) != "result_table":
             QgsProject.instance().removeMapLayer(layer.id())
 
 
@@ -50,6 +50,14 @@ def printRoutes():
     query.next()
     print(query.value(0))
     nr_routes = query.value(0)
+    lid_list_q = db.exec_("SELECT result_table.lid, foo.count FROM result_table INNER JOIN (SELECT count(*), lid \
+    FROM result_table WHERE not did=(-1) group by lid) as foo ON(result_table.lid = foo.lid) WHERE not did=(-1) \
+    group by result_table.lid, foo.count")
+    lid_list = []
+    lid_count = []
+    while lid_list_q.next():
+        lid_list.append(lid_list_q.value(0))
+        lid_count.append(lid_list_q.value(1))
 
     # Källa https://sashat.me/2017/01/11/list-of-20-simple-distinct-colors/
     color_list = [QColor.fromRgb(128, 0, 0), QColor.fromRgb(170, 10, 40), QColor.fromRgb(128, 128, 0),
@@ -59,56 +67,72 @@ def printRoutes():
                   QColor.fromRgb(0, 130, 200), QColor.fromRgb(145, 30, 180), QColor.fromRgb(240, 50, 230),
                   QColor.fromRgb(128, 128, 128), QColor.fromRgb(250, 190, 190), QColor.fromRgb(255, 215, 180),
                   QColor.fromRgb(255, 250, 200), QColor.fromRgb(170, 255, 195)]
-    bad_color = ['Maroon', 'Magenta', 'Olive','Orange','Navy', 'Black', 'Red', 'Teal', 'Blue', 'Lime', 'Cyan', 'Green'
+    bad_color = ['Maroon', 'Magenta', 'Olive', 'Orange', 'Navy', 'Black', 'Red', 'Teal', 'Blue', 'Lime', 'Cyan', 'Green'
         , 'Brown', 'Purple', 'Yellow', 'Grey', 'Pink', 'Apricot', 'Beige', 'Mint', 'Lavender']
+
+    lid_c = []
+    # while lid_query.next():
     while i <= nr_routes:
-        # Routes without offset
-        sqlcall = "(select lid, did, geom from result_table where lid in (select lid from result_table group by lid having \
-        count(*) = 1) and did =" + str(i) + " group by lid, did, geom ORDER BY lid, did)"
-        uri.setDataSource("", sqlcall, "geom", "", "lid")
-        layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
+
+        dummy_q = db.exec_("SELECT did, lid, ST_astext(geom) as geom FROM result_table WHERE not did=(-1) and result_table.did ="+str(i))
+        layert = QgsVectorLayer("MultiLineString?crs=epsg:3006", " route " + str(i), "memory")
         QgsProject.instance().addMapLayer(layert)
-        symbol = QgsLineSymbol.createSimple({'color': bad_color[i],
-                                             'width': '0.6',
-                                             'offset': '0'})
+
+        featurelist = []
+        while dummy_q.next():
+            lid = dummy_q.value(1)
+            seg = QgsFeature()
+            j = 0
+            while j < len(lid_list):
+                if lid == lid_list[j]:
+                    lid_nr = j
+                j += 1
+            # print("lid nr is:"+str(lid_nr)+ " lid is :"+str(lid_list[lid_nr])+" lid count is:"+str(lid_count[lid_nr]))
+            nr_included = 0
+            dummy = 0
+            j=0
+            while j < len(lid_c):
+                if lid == lid_c[j]:
+                    nr_included += 1
+                j += 1
+            # if dummy < nr_included:
+            #     dummy = nr_included
+            lid_c.append(lid)
+            if lid_count[lid_nr] == 1:
+                offset = 0
+            else:
+                if lid_count[lid_nr] % 2 == 0:
+                    # Even
+                    off = (-lid_count[lid_nr]/2) + nr_included
+                    if off == 0:
+                        offset = ((-lid_count[lid_nr] / 2) + nr_included + 1) * 40
+                    else:
+                        offset = ((-lid_count[lid_nr]/2) + nr_included)*40
+
+                else:
+                    # Odd
+                    print("odd value is :", (-lid_count[lid_nr]/2) + nr_included)
+                    print("odd value rounded is :", int((-lid_count[lid_nr] / 2) + nr_included))
+                    offset = int(((-lid_count[lid_nr]/2) + nr_included)*40)
+                    print("odd ",offset)
+
+            seg.setGeometry(QgsGeometry.fromWkt(dummy_q.value(2)).offsetCurve(offset, 1, 1, 2.0))
+            featurelist.append(seg)
+
+        symbol = QgsLineSymbol.createSimple({'color': bad_color[i], 'width': '0.4'})
         renderers = layert.renderer()
         renderers.setSymbol(symbol.clone())
         qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
-        # single_symbol_renderer = layert.renderer()
-        # symbol = single_symbol_renderer.symbol()
-        # symbol.setWidth(0.8)
+        single_symbol_renderer = layert.renderer()
+        symbol = single_symbol_renderer.symbol()
+        symbol.setWidth(0.8)
 
-        # Routes in need of offset
-        sqlcall = "(select lid, did, geom from result_table where lid in (select lid from result_table \
-        group by lid having count(*) > 1) and did=" + str(i) + " group by lid, did, geom ORDER BY lid, did)"
-        uri.setDataSource("", sqlcall, "geom", "", "lid")
-        layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
-        QgsProject.instance().addMapLayer(layert)
-        if i == 1:
-                offset=0
-        else:
-            offset = i-i*0.7
-        print("i is "+str(i)+" and offset is:"+str(offset))
-        symbol = QgsLineSymbol.createSimple({'color': bad_color[i],
-                                                  'width': '0.4',
-                                                  'offset': str(offset)})
-        renderers = layert.renderer()
-        renderers.setSymbol(symbol.clone())
-        qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
+        layert.dataProvider().addFeatures(featurelist)
+        layert.triggerRepaint()
+        i += 1
+        print("route nr",i-1)
+        print("nr included max ",dummy)
 
-
-        # single_symbol_renderer = layert.renderer()
-        # symbol = single_symbol_renderer.symbol()
-        # symbol.setWidth(0.8)
-
-
-        #
-        # if i < len(color_list):
-        #     symbol.setColor(color_list[i])
-        #     layert.triggerRepaint()
-        #     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
-        #
-        i = i + 1
 
     # Start node
     start_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,1)) AS start \
@@ -127,9 +151,9 @@ def printRoutes():
     # Add the layer to the Layers panel
     QgsProject.instance().addMapLayer(layer)
     single_symbol_renderer = layer.renderer()
-    symbol = single_symbol_renderer.symbol()
-    symbol.setColor(QColor.fromRgb(0, 225, 0))
-    symbol.setSize(3)
+    symbol1 = single_symbol_renderer.symbol()
+    symbol1.setColor(QColor.fromRgb(0, 225, 0))
+    symbol1.setSize(3)
     # more efficient than refreshing the whole canvas, which requires a redraw of ALL layers
     layer.triggerRepaint()
     # update legend for layer
