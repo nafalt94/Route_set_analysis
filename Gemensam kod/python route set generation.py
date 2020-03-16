@@ -1238,7 +1238,7 @@ def main():
     tic()
 
     # Variable definitions
-    my = 0.05
+    my = 0.01
     threshold = 1.3
     max_overlap  = 1
 
@@ -1249,10 +1249,13 @@ def main():
 
 
 
-    start_zone = 7774
-    end_zone = 7636
-    #cur.execute("DROP TABLE if exists all_results")
-    #routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
+    start_zone = 7487
+    end_zone = 7282
+    cur.execute("DROP TABLE if exists all_results")
+    cur.execute("DROP TABLE if exists cost_table")
+    cur.execute("DROP TABLE if exists od_lid")
+
+    routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
 
 
     # Korta OD-par
@@ -1291,7 +1294,7 @@ def main():
 
 
     #route_set_generation_rejoin(start, end, my, threshold)
-    routeSetGeneration(start, end, my, threshold, max_overlap)
+    #routeSetGeneration(start, end, my, threshold, max_overlap)
 
     #onetoMany(6904)
     #my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]

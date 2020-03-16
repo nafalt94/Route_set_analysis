@@ -105,15 +105,15 @@ def printRoutes():
                     # Even
                     off = (-lid_count[lid_nr]/2) + nr_included
                     if off == 0:
-                        offset = ((-lid_count[lid_nr] / 2) + nr_included + 1) * 40
+                        offset = ((-lid_count[lid_nr] / 2) + nr_included + 1) * 80
                     else:
-                        offset = ((-lid_count[lid_nr]/2) + nr_included)*40
+                        offset = ((-lid_count[lid_nr]/2) + nr_included)*80
 
                 else:
                     # Odd
                     print("odd value is :", (-lid_count[lid_nr]/2) + nr_included)
                     print("odd value rounded is :", int((-lid_count[lid_nr] / 2) + nr_included))
-                    offset = int(((-lid_count[lid_nr]/2) + nr_included)*40)
+                    offset = int(((-lid_count[lid_nr]/2) + nr_included)*80)
                     print("odd ",offset)
 
             seg.setGeometry(QgsGeometry.fromWkt(dummy_q.value(2)).offsetCurve(offset, 1, 1, 2.0))
@@ -125,7 +125,7 @@ def printRoutes():
         qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
         single_symbol_renderer = layert.renderer()
         symbol = single_symbol_renderer.symbol()
-        symbol.setWidth(0.8)
+        symbol.setWidth(0.5)
 
         layert.dataProvider().addFeatures(featurelist)
         layert.triggerRepaint()
@@ -164,7 +164,7 @@ def printRoutes():
     end_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,-1)) AS start FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
     FROM result_table  WHERE path_seq = (SELECT max(path_seq) FROM result_table WHERE did=1) and did=1) AS foo")
     end_q.next()
-    layere = QgsVectorLayer('Point?crs=epsg:3006', 'END', 'memory')
+    layere = QgsVectorLayer('Point?crs=epsg:3006', 'End', 'memory')
     # Set the provider to accept the data source
     prov = layere.dataProvider()
     # Add a new feature and assign the geometry
