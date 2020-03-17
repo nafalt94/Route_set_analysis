@@ -16,8 +16,6 @@ print(__name__)
 
 # Function definitions
 
-print("testa push")
-
 def TicTocGenerator():
     # Generator that returns time differences
     ti = 0  # initial time
@@ -96,9 +94,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
-    # print("Start zone is:"+str(start_zone))
-    # print("End zone is:"+str(end_zone))
-    # print("Start node is: "+str(start)+" End node is: "+str(end))
+    print("Start zone is:"+str(start_zone))
+    print("End zone is:"+str(end_zone))
+    print("Start node is: "+str(start)+" End node is: "+str(end))
 
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
@@ -112,7 +110,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
 
     route1_cost = cur.fetchone()[0]
-    # print("Current cost route 1: " + str(route1_cost))
+    print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
 
@@ -1059,27 +1057,27 @@ def getAveragesOD():
 
             # # Average cover in length of routes in od-pair.
             #
-            if nr_routes > 1:
-                i = nr_routes
-                coveragekm = 0.0
-                while i > 1:
-                    cur.execute("SELECT coalesce(sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
-                                did=" + str(i) +" and start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
-                                and my = " + str(my[0]) + "),0) AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
-                                did=" + str(i) + " and start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
-                                and my = " + str(my[0]) + " and lid = \
-                                ANY(SELECT lid FROM all_results WHERE start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
-                                and my = " + str(my[0]) + " and NOT did >= " + str(i) + ") group by lid,did,geom)\
-                                                    as foo")
-
-                    current = cur.fetchone()[0]
-                    #print("current coverage :"+str(current))
-                    coveragekm += current
-                    i -= 1
-                avg_coveragekm = coveragekm/(nr_routes-1)
-                #print("Coverage using length is :", coveragekm / (nr_routes - 1))
-            else:
-                avg_coveragekm = -1
+            # if nr_routes > 1:
+            #     i = nr_routes
+            #     coveragekm = 0.0
+            #     while i > 1:
+            #         cur.execute("SELECT coalesce(sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
+            #                     did=" + str(i) +" and start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
+            #                     and my = " + str(my[0]) + "),0) AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
+            #                     did=" + str(i) + " and start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
+            #                     and my = " + str(my[0]) + " and lid = \
+            #                     ANY(SELECT lid FROM all_results WHERE start_zone = " + str(od[0]) + " and end_zone=" + str(od[1]) + "\
+            #                     and my = " + str(my[0]) + " and NOT did >= " + str(i) + ") group by lid,did,geom)\
+            #                                         as foo")
+            #
+            #         current = cur.fetchone()[0]
+            #         #print("current coverage :"+str(current))
+            #         coveragekm += current
+            #         i -= 1
+            #     avg_coveragekm = coveragekm/(nr_routes-1)
+            #     #print("Coverage using length is :", coveragekm / (nr_routes - 1))
+            # else:
+            #     avg_coveragekm = -1
                 #print("Only 1 route generated!")
             #
 
@@ -1105,42 +1103,42 @@ def getAveragesOD():
 
             # # Average cover using the most alike route in od-pair using length as comparison as coverage
             # #
-            # if nr_routes > 1:
-            #     i = nr_routes
-            #     coveragemlkm = 0.0
-            #     while i > 1:
-            #         most_like = 0.0
-            #         j = nr_routes
-            #         while j > 0:
-            #             #print("j is: "+str(j)+"  i is: "+str(i))
-            #             if j != i:
-            #                 cur.execute("SELECT coalesce(sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
-            #                                                 did=" + str(i) + " and start_zone = " + str(
-            #                     od[0]) + " and end_zone=" + str(od[1]) + "\
-            #                                                 and my = " + str(my[0]) + "),0) AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
-            #                                                 did=" + str(i) + " and start_zone = " + str(
-            #                     od[0]) + " and end_zone=" + str(od[1]) + "\
-            #                                                 and my = " + str(my[0]) + " and lid = \
-            #                                                 ANY(SELECT lid FROM all_results WHERE did = " + str(j) + ") group by lid,did,geom)\
-            #                                                                     as foo")
-            #                 temp_ml = cur.fetchone()[0]
-            #                 #print("overlap is:",temp_ml)
-            #
-            #
-            #                 if (temp_ml > most_like):
-            #                     most_like = temp_ml
-            #
-            #
-            #
-            #             j -= 1
-            #         #print("Most like for did="+str(i)+" is:", most_like)
-            #         coveragemlkm += most_like
-            #         i -= 1
-            #     avg_coveragemlkm = coveragemlkm / (nr_routes - 1)
-            #     #print("Coverage using most like length is :", coveragemlkm / (nr_routes - 1))
-            # else:
-            #     avg_coveragemlkm = -1
-            #     #print("Only 1 route generated!")
+            if nr_routes > 1:
+                i = nr_routes
+                coveragemlkm = 0.0
+                while i > 1:
+                    most_like = 0.0
+                    j = nr_routes
+                    while j > 0:
+                        #print("j is: "+str(j)+"  i is: "+str(i))
+                        if j != i:
+                            cur.execute("SELECT coalesce(sum(st_length(geom)) / (SELECT sum(st_length(geom)) FROM all_results WHERE \
+                                                            did=" + str(i) + " and start_zone = " + str(
+                                od[0]) + " and end_zone=" + str(od[1]) + "\
+                                                            and my = " + str(my[0]) + "),0) AS per FROM (SELECT did,lid,geom FROM all_results WHERE \
+                                                            did=" + str(i) + " and start_zone = " + str(
+                                od[0]) + " and end_zone=" + str(od[1]) + "\
+                                                            and my = " + str(my[0]) + " and lid = \
+                                                            ANY(SELECT lid FROM all_results WHERE did = " + str(j) + ") group by lid,did,geom)\
+                                                                                as foo")
+                            temp_ml = cur.fetchone()[0]
+                            #print("overlap is:",temp_ml)
+
+
+                            if (temp_ml > most_like):
+                                most_like = temp_ml
+
+
+
+                        j -= 1
+                    #print("Most like for did="+str(i)+" is:", most_like)
+                    coveragemlkm += most_like
+                    i -= 1
+                avg_coveragemlkm = coveragemlkm / (nr_routes - 1)
+                #print("Coverage using most like length is :", coveragemlkm / (nr_routes - 1))
+            else:
+                avg_coveragemlkm = -1
+                #print("Only 1 route generated!")
 
 
             # Time for OD-pair
@@ -1245,18 +1243,18 @@ def main():
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
-    start = 7128  # 7183
-    end = 6912  # 7543
+    start = 7852  # 7183
+    end = 7987 # 7543
 
 
 
     start_zone = 7487
     end_zone = 7282
-    cur.execute("DROP TABLE if exists all_results")
-    cur.execute("DROP TABLE if exists cost_table")
-    cur.execute("DROP TABLE if exists od_lid")
-
-    routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
+    # cur.execute("DROP TABLE if exists all_results")
+    # cur.execute("DROP TABLE if exists cost_table")
+    # cur.execute("DROP TABLE if exists od_lid")
+    #
+    # routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
 
 
     # Korta OD-par
@@ -1294,8 +1292,8 @@ def main():
     cur.execute("DROP TABLE if exists all_results")
 
 
-    #route_set_generation_rejoin(start, end, my, threshold)
-    #routeSetGeneration(start, end, my, threshold, max_overlap)
+
+    routeSetGeneration(start, end, my, threshold, max_overlap)
 
     #onetoMany(6904)
     #my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]
@@ -1306,11 +1304,12 @@ def main():
     end_list = [7556, 6912, 6822]
     ## AVERAGES TEST
     my_list = [0.001, 0.005, 0.01, 0.02, 0.03, 0.05]
+    #my_list = [0.001, 0.01, 0.005]
     randomlist = []
 
     # start_list = generateRandomOd()[0]
     # end_list = generateRandomOd()[1]
-
+    #
 
 
     # Generate all results
@@ -1319,7 +1318,7 @@ def main():
     #excelStats(start_list, end_list,my_list,threshold,0)
 
     # Gen avg od result creates table my_od_res
-
+    #
     # getAveragesOD()
 
     #
