@@ -10,12 +10,13 @@ import numpy as np
 
 
 
+
 print(__name__)
 
 
 # Function definitions
 
-
+print("testa push")
 
 def TicTocGenerator():
     # Generator that returns time differences
