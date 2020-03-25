@@ -308,10 +308,6 @@ def printRoutesRejoin():
 
     layer.triggerRepaint()
     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layere.id())
-
-        
-        
-    
     
 # det jag behöver få från databasen start_list, end_list, lids
 def print_selected_pairs():
@@ -620,11 +616,11 @@ def main():
         removeRoutesLayers()
 
         # Create layer for one route set (run routeSetGeneration before).
-        printRoutes()
+        # printRoutes()
         #printRoutesRejoin()
 
         # Creates new visualisation layer for selected pairs (run selectedODResultTable before).
-        #print_selected_pairs()
+        print_selected_pairs()
 
         # All to all visualisation for all pairs in list (run AllToAllResultTable before).
         #allToAll()

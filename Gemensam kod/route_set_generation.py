@@ -51,7 +51,9 @@ def removeRoutesLayers():
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
-            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid":
+            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid"\
+                and str(layer.name()) != "Link used by 3 shortest paths" and str(layer.name()) != "Link used by 0 shortest paths"\
+                and str(layer.name()) != "OD_pairs":
             QgsProject.instance().removeMapLayer(layer.id())
 
 
@@ -893,25 +895,24 @@ def main():
         # end_list = [6820, 7585, 7635, 6870, 6937, 7170, 7161, 7539, 7886, 7946, 6973, 7308, 7661]
 
         # Långa OD-par
-        start_list = [7472, 7815,7128,7801,7707,7509,7304,7151,7487,7737]
-        end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
+        # start_list = [7472, 7815,7128,7801,7707,7509,7304,7151,7487,7737]
+        # end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
 
         # Nya Långa OD-par
         # start_list = [7487, 7166,7721,7302]
         # end_list = [7282, 7506,7817,7782]
 
 
-        list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
+        list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227, 7373]
         #list = [6904, 6884, 6837, 6776, 7835]
 
         removed_lid = 89227  # Götgatan
-        removed_lid = [830259]  # Söderledstunneln
+        #removed_lids = [830259]  # Söderledstunneln
 
 
         # [81488, 83171] för Essingeleden
         # [83025, 84145] för Söderleden
         removed_lids = [83025, 84145]
-        #selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
 
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
@@ -920,14 +921,20 @@ def main():
         db.exec_("DROP TABLE if exists cost_table")
 
 
+        start_list = [6884, 6922, 6904, 6968]
+        end_list = [7877,7630, 6837, 6877]
+
+        #selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
+
+
         my_list = [0.01, 0.05, 0.2, 0.4, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 3, 5, 10]
         my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]
         #my_list = [0.05]
 
         #selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
         #excelStats(start_list, end_list, my_list,threshold)
-        # allToAllResultTable(list,my,threshold)
-        # allToAll(list, removed_lids)
+        allToAllResultTable(list,my,threshold)
+        allToAll(list, removed_lids)
 
         start_zone = 7487
         end_zone = 7282

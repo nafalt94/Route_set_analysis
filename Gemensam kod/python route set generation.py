@@ -57,9 +57,8 @@ def genonenode(zone):
                 FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
                 distance FROM model_graph, (SELECT id, ST_centroid(geom) AS \
                 emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme \
-                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance) AS subq) AS subq \
+                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance, lid desc) AS subq) AS subq \
                 WHERE score = 1)")
-
 
 
     cur.execute("SELECT start_node FROM od_lid WHERE id=" + str(zone))
@@ -1254,7 +1253,7 @@ def main():
     # cur.execute("DROP TABLE if exists cost_table")
     # cur.execute("DROP TABLE if exists od_lid")
     #
-    # routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
+    routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
 
 
     # Korta OD-par
@@ -1289,11 +1288,8 @@ def main():
     #     print("my is :" + str(my_list[j]) + " and average length is :" + str(len_rs) + " nr of routes is:"+str(nr_routes))
     #     j += 1
 
-    cur.execute("DROP TABLE if exists all_results")
 
-
-
-    routeSetGeneration(start, end, my, threshold, max_overlap)
+    #routeSetGeneration(start, end, my, threshold, max_overlap)
 
     #onetoMany(6904)
     #my_list = [0.001, 0.003,0.005, 0.01, 0.02, 0.03,0.05]
