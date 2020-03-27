@@ -301,7 +301,7 @@ def odEffect(start, end, lids):
         return (float(cost_alt) / float(cost_opt))
 
 
-# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
+# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_deterioration, #pairs]
 def analysis_multiple_zones(start_node, list, lids):
     count3 = 0
     count2 = 0
@@ -366,7 +366,7 @@ def print_selected_pairs(start_list, end_list, lids):
 
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
-    layer = QgsVectorLayer(uri.uri(), "result_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "result_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
@@ -374,8 +374,8 @@ def print_selected_pairs(start_list, end_list, lids):
         ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
         ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('Alternative route: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
-        ('Alternative route: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
+        ('Alternative route: 1-10 % deterioration', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Alternative route: 10-100 % deterioration', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
     )
 
     # create a category for each item in values
@@ -448,31 +448,31 @@ def allToAll(list, removed_lids):
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_deterioration, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
     i = 0
     while i < len(list):
         result = analysis_multiple_zones(list[i], list, removed_lids)
         db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_no_routes = " +
-                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
+                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_deterioration = " +
                 str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
                 str(list[i] ) + ";")
         i +=1
 
-    ############################ Create layer for mean impairment
+    ############################ Create layer for mean deterioration
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "mean_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean impairment 1-10% ', 0, 1.1, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment 10-20% ', 1.1, 1.2, QColor.fromRgb(255, 255, 153)),
-        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 178, 102)),
-        ('Mean impairment 30-100% ', 1.3, 100, QColor.fromRgb(255, 102, 102)),
+        ('No deterioration', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean deterioration 1-10% ', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Mean deterioration 10-20% ', 1.1, 1.2, QColor.fromRgb(255, 255, 153)),
+        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 178, 102)),
+        ('Mean deterioration 30-100% ', 1.3, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -484,7 +484,7 @@ def allToAll(list, removed_lids):
         ranges.append(rng)
 
     ## create the renderer and assign it to a layer
-    expression = 'mean_impairment'  # field name
+    expression = 'mean_deterioration'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     ############################ Create layer for nr_affected OD-pairs
@@ -536,33 +536,33 @@ def allToAllBigTest(list,removed_lids):
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_deterioration, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
 
     i = 0
     while i < len(list):
         result = analysis_multiple_zones(list[i], list, removed_lids)
         db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_no_routes = " +
-                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
+                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_deterioration = " +
                 str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
                 str(list[i] ) + ";")
         i +=1
 
 
-    # Create layer for mean impairment
+    # Create layer for mean deterioration
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "mean_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean impairment 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
-        ('Mean impairment 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
-        ('Mean impairment 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+        ('No deterioration', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean deterioration 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
+        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
+        ('Mean deterioration 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
+        ('Mean deterioration 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -574,7 +574,7 @@ def allToAllBigTest(list,removed_lids):
         ranges.append(rng)
 
     ## create the renderer and assign it to a layer
-    expression = 'mean_impairment'  # field name
+    expression = 'mean_deterioration'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     # Create layer for nr_affected OD-pairs
