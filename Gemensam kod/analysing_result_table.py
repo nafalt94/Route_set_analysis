@@ -137,7 +137,7 @@ def create_tables(start_list, end_list,lid):
 
     db.exec_("ALTER TABLE OD_lines ADD COLUMN id SERIAL PRIMARY KEY;")
 
-# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
+# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_deterioration, #pairs]
 def many_zones(start_node, end_list,lid):
 
     count3 = 0
