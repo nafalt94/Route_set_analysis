@@ -469,10 +469,10 @@ def allToAll(list, removed_lids):
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
         ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean impairment 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
-        ('Mean impairment 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
-        ('Mean impairment 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+        ('Mean impairment 1-10% ', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Mean impairment 10-20% ', 1.1, 1.2, QColor.fromRgb(255, 255, 153)),
+        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 178, 102)),
+        ('Mean impairment 30-100% ', 1.3, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -903,7 +903,7 @@ def main():
         # end_list = [7282, 7506,7817,7782]
 
 
-        list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227, 7373]
+        list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227, 7079]
         #list = [6904, 6884, 6837, 6776, 7835]
 
         removed_lid = 89227  # Götgatan
@@ -919,7 +919,6 @@ def main():
         #___________________________________________________________________________________________________________________
         db.exec_("DROP TABLE if exists all_results")
         db.exec_("DROP TABLE if exists cost_table")
-
 
         start_list = [6884, 6922, 6904, 6968]
         end_list = [7877,7630, 6837, 6877]
