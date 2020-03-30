@@ -73,7 +73,7 @@ def genonenode(zone):
     else:
         #raise Exception('No node in zones:' + str(zone))
         print("No node in zones:"+ str(zone))
-        node = None
+        node = -1
     # # Saving SQL answer into matrix
     # while query1.next():
     #     counter1 += 1
@@ -1229,21 +1229,38 @@ def generateRandomOd():
 
 def fetch_update(my, threshold, max_overlap):
     mac = get_mac()
+    counter1 = 0
+    counter2= 0
 
-    #
-    cur.execute("WITH cte AS (select * from all_od_pairs "
-                "where EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL limit 1) "
-                "UPDATE all_od_pairs a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
-
+    #Check if any assignments needs to be finished
     cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status = "+str(mac))
-    dummy = cur.fetchall()
-    if dummy[0][0] is None or dummy[0][1] is None:
-        cur.execute("UPDATE all_od_pairs SET status=1337")
-    else:
+    assignment = cur.fetchall()
+    #print("assignment: "+str(assignment))
+
+    if not assignment:
+        cur.execute("WITH cte AS (select * from all_od_pairs "
+                    "where EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL limit 1) "
+                    "UPDATE all_od_pairs a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+
+        cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status != "+str(mac))
+        dummy = cur.fetchall()
+        print(str(dummy[0][0]) +"  "+str(dummy[0][1]))
+
         routeSetGeneration(dummy[0][0], dummy[0][1], my, threshold, max_overlap)
-        #print(str(dummy))
-
-
+        cur.execute("UPDATE all_od_pairs SET status=1 WHERE origin = " +str(dummy[0][0])+ " and destination = " +str(dummy[0][1]))
+        cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(dummy[0][0])+ " and destination = " +str(dummy[0][1]))
+        counter1 += 1
+            #print(str(dummy))
+    else:
+        if assignment[0][0] is None or assignment[0][1] is None:
+            cur.execute("UPDATE all_od_pairs SET status=1337")
+        else:
+            routeSetGeneration(assignment[0][0], assignment[0][1], my, threshold, max_overlap)
+            cur.execute("UPDATE all_od_pairs SET status=1 WHERE origin = " +str(assignment[0][0])+ " and destination = " +str(assignment[0][1]))
+            cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(assignment[0][0])+ " and destination = " +str(assignment[0][1]))
+            counter2 += 1
+    print("Counter1 :"+ str(counter1)+ " Counter2 :"+ str(counter2))
+    conn.commit()
 # End of function definitions
 
 # Connection global to be used everywhere.
