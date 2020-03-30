@@ -1,3 +1,11 @@
+CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id 
+                ORDER BY id, distance) AS score, id, lid, start_node, distance 
+                FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS 
+                distance FROM model_graph, (SELECT id, ST_centroid(geom) AS 
+                emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme 
+                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance, lid desc) AS subq) AS subq 
+                WHERE score = 1)
+
 drop table all_od_pairs
 
 SELECT a.id as origin, b.id as destination
