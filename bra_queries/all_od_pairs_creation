@@ -21,3 +21,14 @@ ALTER TABLE all_od_pairs ADD COLUMN time_updated timestamp with time zone
 UPDATE all_od_pairs SET status = -1
 
 select * from all_od_pairs
+
+
+## För att se hur långt processen är gången:
+
+
+SELECT status,
+   100.0 * COUNT(*)        
+   / SUM(COUNT(*)) OVER () 
+   As "Percentage"
+FROM all_od_pairs
+GROUP BY status
