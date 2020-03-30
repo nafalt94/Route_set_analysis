@@ -71,9 +71,9 @@ def genonenode(zone):
     if result is not None:
         node = result[0]
     else:
-        #raise Exception('No node in zones:' + str(zone))
-        print("No node in zones:"+ str(zone))
-        node = -1
+        raise Exception('No node in zones:' + str(zone))
+        # print("No node in zones:"+ str(zone))
+        # node = -1
     # # Saving SQL answer into matrix
     # while query1.next():
     #     counter1 += 1
@@ -195,7 +195,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
                 overlap = cur.fetchone()[0]
                 #Check if the overlap of a newly generated route is too high..
-                if overlap < max_overlap:
+                if overlap <= max_overlap:
                     cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
                             + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
                             path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
@@ -216,6 +216,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         cur.execute("UPDATE result_table SET time = " + dummy )
         cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
         conn.commit()
+        return True
+    return False
+
 
 # Route set generation who returns some stats.
 def routeSetGenerationStats(start_zone, end_zone, my, threshold):
@@ -1227,10 +1230,8 @@ def generateRandomOd():
         counter += 1
     return start_list,end_list
 
-def fetch_update(my, threshold, max_overlap):
+def fetch_update(my, threshold, max_overlap, limit):
     mac = get_mac()
-    counter1 = 0
-    counter2= 0
 
     #Check if any assignments needs to be finished
     cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status = "+str(mac))
@@ -1238,28 +1239,26 @@ def fetch_update(my, threshold, max_overlap):
     #print("assignment: "+str(assignment))
 
     if not assignment:
+        print("gick den in?")
         cur.execute("WITH cte AS (select * from all_od_pairs "
-                    "where EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL limit 1) "
+                    "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
                     "UPDATE all_od_pairs a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
 
-        cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status != "+str(mac))
-        dummy = cur.fetchall()
-        print(str(dummy[0][0]) +"  "+str(dummy[0][1]))
+        cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status = "+str(mac))
+        assignment = cur.fetchall()
 
-        routeSetGeneration(dummy[0][0], dummy[0][1], my, threshold, max_overlap)
-        cur.execute("UPDATE all_od_pairs SET status=1 WHERE origin = " +str(dummy[0][0])+ " and destination = " +str(dummy[0][1]))
-        cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(dummy[0][0])+ " and destination = " +str(dummy[0][1]))
-        counter1 += 1
-            #print(str(dummy))
-    else:
-        if assignment[0][0] is None or assignment[0][1] is None:
-            cur.execute("UPDATE all_od_pairs SET status=1337")
+    # print(len(assignment))
+    # print(assignment)
+    i = 0
+    while i < len(assignment):
+        if routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap):
+            cur.execute("UPDATE all_od_pairs SET status=1 WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
+            cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
         else:
-            routeSetGeneration(assignment[0][0], assignment[0][1], my, threshold, max_overlap)
-            cur.execute("UPDATE all_od_pairs SET status=1 WHERE origin = " +str(assignment[0][0])+ " and destination = " +str(assignment[0][1]))
-            cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(assignment[0][0])+ " and destination = " +str(assignment[0][1]))
-            counter2 += 1
-    print("Counter1 :"+ str(counter1)+ " Counter2 :"+ str(counter2))
+            cur.execute("UPDATE all_od_pairs SET status=-2 WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
+            cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
+        i +=1
+
     conn.commit()
 # End of function definitions
 
@@ -1282,11 +1281,15 @@ def main():
     start = 7852  # 7183
     end = 7987 # 7543
 
+    cur.execute("DROP TABLE if exists all_results")
     cur.execute("UPDATE all_od_pairs SET status = -1")
     cur.execute("UPDATE all_od_pairs SET time_updated  = null")
+
+    #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
+    fetch_update(my, threshold, max_overlap,100)
     i = 0
     while i < 100:
-        fetch_update(my, threshold, max_overlap)
+        #fetch_update(my, threshold, max_overlap)
         i += 1
 
     start_zone = 7815
