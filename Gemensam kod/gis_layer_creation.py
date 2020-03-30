@@ -105,15 +105,15 @@ def printRoutes():
                     # Even
                     off = (-lid_count[lid_nr]/2) + nr_included
                     if off == 0:
-                        offset = ((-lid_count[lid_nr] / 2) + nr_included + 1) * 80
+                        offset = ((-lid_count[lid_nr] / 2) + nr_included + 1) * 200
                     else:
-                        offset = ((-lid_count[lid_nr]/2) + nr_included)*80
+                        offset = ((-lid_count[lid_nr]/2) + nr_included)*200
 
                 else:
                     # Odd
                     print("odd value is :", (-lid_count[lid_nr]/2) + nr_included)
                     print("odd value rounded is :", int((-lid_count[lid_nr] / 2) + nr_included))
-                    offset = int(((-lid_count[lid_nr]/2) + nr_included)*80)
+                    offset = int(((-lid_count[lid_nr]/2) + nr_included)*200)
                     print("odd ",offset)
 
             seg.setGeometry(QgsGeometry.fromWkt(dummy_q.value(2)).offsetCurve(offset, 1, 1, 2.0))
@@ -125,7 +125,7 @@ def printRoutes():
         qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
         single_symbol_renderer = layert.renderer()
         symbol = single_symbol_renderer.symbol()
-        symbol.setWidth(0.5)
+        symbol.setWidth(0.8)
 
         layert.dataProvider().addFeatures(featurelist)
         layert.triggerRepaint()

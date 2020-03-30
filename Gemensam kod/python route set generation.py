@@ -8,6 +8,9 @@ from datetime import datetime
 import psycopg2
 import numpy as np
 
+#For att fa MAC-address
+from uuid import getnode as get_mac
+
 
 
 print(__name__)
@@ -1207,7 +1210,6 @@ def getAllAverages(my_list):
 
     return average_nr, average_cov_km, average_mlkm, average_cov_lid, average_cost, average_sr_cost,average_time
 
-
 def generateRandomOd():
     cur.execute("DROP TABLE IF EXISTS rand_od")
     cur.execute("CREATE TABLE rand_od AS SELECT * FROM od_lid ORDER BY RANDOM()")
@@ -1226,6 +1228,21 @@ def generateRandomOd():
         counter += 1
     return start_list,end_list
 
+def fetch_update():
+    mac = get_mac()
+
+    #
+    cur.execute("WITH cte AS (select * from all_od_pairs "
+                "where EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL limit 1) "
+                "UPDATE all_od_pairs a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+
+    cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status = "+str(mac))
+
+
+    dummy = cur.fetchall()
+    print(str(dummy))
+
+
 # End of function definitions
 
 # Connection global to be used everywhere.
@@ -1240,22 +1257,23 @@ def main():
     # Variable definitions
     my = 0.01
     threshold = 1.3
-    max_overlap  = 1
+    max_overlap  = 0.8
 
     # Which zones to route between
     # TESTA om alla dör där 7704 7700 7701 7763 denna har väldigt liten del model_graph 7702
     start = 7128  # 7183
     end = 6912  # 7543
 
+    fetch_update()
 
+    start_zone = 7815
+    end_zone = 7798
 
-    start_zone = 7487
-    end_zone = 7282
-    cur.execute("DROP TABLE if exists all_results")
-    cur.execute("DROP TABLE if exists cost_table")
-    cur.execute("DROP TABLE if exists od_lid")
+    # cur.execute("DROP TABLE if exists all_results")
+    # cur.execute("DROP TABLE if exists cost_table")
+    # cur.execute("DROP TABLE if exists od_lid")
 
-    routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
+    #routeSetGeneration(start_zone, end_zone, my, threshold, max_overlap)
 
 
     # Korta OD-par
@@ -1290,7 +1308,7 @@ def main():
     #     print("my is :" + str(my_list[j]) + " and average length is :" + str(len_rs) + " nr of routes is:"+str(nr_routes))
     #     j += 1
 
-    cur.execute("DROP TABLE if exists all_results")
+    #cur.execute("DROP TABLE if exists all_results")
 
 
     #route_set_generation_rejoin(start, end, my, threshold)
