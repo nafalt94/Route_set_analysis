@@ -145,10 +145,13 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         i = 2
         nr_routes = 1
 
+        # Count if overlap and nr_route is the same too many times (short OD-pairs with no routes)
+        overlap_count = 0
+
         # while comp(route_stop, route1_cost, threshold):
         while True:
             #print("Route stop is ="+str(route_stop)+" and distance is ="+str(distance))
-            if nr_routes >= 1000 or route_stop is None or route_stop > 1000000:
+            if nr_routes >= 100 or route_stop is None or route_stop > 1000000:
                 if nr_routes >= 100:
                     print("Warning: The number of routes was over 100 for start zone: \
                     " + str(start_zone) + " and end zone: " + str(end_zone))
@@ -194,6 +197,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             "FROM (SELECT lid,geom FROM temp_table2 WHERE lid = "
                             "ANY(SELECT lid FROM result_table) group by lid,geom) as foo")
                 overlap = cur.fetchone()[0]
+
                 #Check if the overlap of a newly generated route is too high..
                 if overlap <= max_overlap:
                     cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
@@ -202,6 +206,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                     i = i + 1
                     nr_routes = nr_routes + 1
                     # print("HÄR ÄR VI")
+                    overlap_count = 0
                 else:
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
@@ -210,14 +215,25 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
 
                 cur.execute("DROP TABLE if exists temp_table1")
                 cur.execute("SELECT * INTO temp_table1 from temp_table2")
+
+                overlap_count += 1
+                # if stuck in loop for close OD-pairs..
+                if overlap_count > 50:
+                    break
             else:
                 break
         dummy = str(toc())
         cur.execute("UPDATE result_table SET time = " + dummy )
         cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
         conn.commit()
-        return True
-    return False
+        # No problems
+        return 1
+    # No route available
+    if reverse is None:
+        return 2
+    # Only reverse cost available
+    else:
+        return 3
 
 
 # Route set generation who returns some stats.
@@ -1251,12 +1267,14 @@ def fetch_update(my, threshold, max_overlap, limit):
     # print(assignment)
     i = 0
     while i < len(assignment):
-        if routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap):
+        if routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap) == 1:
             cur.execute("UPDATE all_od_pairs SET status=1 WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
-            cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
+        elif routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap) == 2:
+            cur.execute("UPDATE all_od_pairs SET status=2 WHERE origin = " + str(assignment[i][0]) + " and destination = " + str(assignment[i][1]))
         else:
-            cur.execute("UPDATE all_od_pairs SET status=-2 WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
-            cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
+            cur.execute("UPDATE all_od_pairs SET status=3 WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
+
+        cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " + str(assignment[i][0]) + " and destination = " + str(assignment[i][1]))
         i +=1
 
     conn.commit()
@@ -1286,7 +1304,7 @@ def main():
     cur.execute("UPDATE all_od_pairs SET time_updated  = null")
 
     #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
-    fetch_update(my, threshold, max_overlap,100)
+    fetch_update(my, threshold, max_overlap,1000)
     i = 0
     while i < 100:
         #fetch_update(my, threshold, max_overlap)
