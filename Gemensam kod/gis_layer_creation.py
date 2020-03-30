@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import *
 from qgis.core import QgsFeature, QgsGeometry, QgsProject
 from shapely import wkb
 
-
 print(__name__)
+
 
 # Function definition
 
@@ -32,13 +32,15 @@ def tic():
     # Records a time in TicToc, marks the beginning of a time interval
     toc(False)
 
+
 def removeRoutesLayers():
     layers = QgsProject.instance().mapLayers()
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
-            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid" and str(layer.name()) != "result_table":
+            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(
+            layer.name()) != "ata_lid" and str(layer.name()) != "result_table":
             QgsProject.instance().removeMapLayer(layer.id())
 
 
@@ -74,7 +76,9 @@ def printRoutes():
     # while lid_query.next():
     while i <= nr_routes:
 
-        dummy_q = db.exec_("SELECT did, lid, ST_astext(geom) as geom FROM result_table WHERE not did=(-1) and result_table.did ="+str(i))
+        dummy_q = db.exec_(
+            "SELECT did, lid, ST_astext(geom) as geom FROM result_table WHERE not did=(-1) and result_table.did =" + str(
+                i))
         layert = QgsVectorLayer("MultiLineString?crs=epsg:3006", " route " + str(i), "memory")
         QgsProject.instance().addMapLayer(layert)
 
@@ -90,7 +94,7 @@ def printRoutes():
             # print("lid nr is:"+str(lid_nr)+ " lid is :"+str(lid_list[lid_nr])+" lid count is:"+str(lid_count[lid_nr]))
             nr_included = 0
             dummy = 0
-            j=0
+            j = 0
             while j < len(lid_c):
                 if lid == lid_c[j]:
                     nr_included += 1
@@ -103,18 +107,27 @@ def printRoutes():
             else:
                 if lid_count[lid_nr] % 2 == 0:
                     # Even
-                    off = (-lid_count[lid_nr]/2) + nr_included
+                    off = (-lid_count[lid_nr] / 2) + nr_included
                     if off == 0:
                         offset = ((-lid_count[lid_nr] / 2) + nr_included + 1) * 200
                     else:
+<<<<<<< HEAD
                         offset = ((-lid_count[lid_nr]/2) + nr_included)*200
+=======
+                        offset = ((-lid_count[lid_nr] / 2) + nr_included) * 80
+>>>>>>> b69948db6665ed5f30d2925c9356500bdac0da03
 
                 else:
                     # Odd
-                    print("odd value is :", (-lid_count[lid_nr]/2) + nr_included)
+                    print("odd value is :", (-lid_count[lid_nr] / 2) + nr_included)
                     print("odd value rounded is :", int((-lid_count[lid_nr] / 2) + nr_included))
+<<<<<<< HEAD
                     offset = int(((-lid_count[lid_nr]/2) + nr_included)*200)
                     print("odd ",offset)
+=======
+                    offset = int(((-lid_count[lid_nr] / 2) + nr_included) * 80)
+                    print("odd ", offset)
+>>>>>>> b69948db6665ed5f30d2925c9356500bdac0da03
 
             seg.setGeometry(QgsGeometry.fromWkt(dummy_q.value(2)).offsetCurve(offset, 1, 1, 2.0))
             featurelist.append(seg)
@@ -130,9 +143,8 @@ def printRoutes():
         layert.dataProvider().addFeatures(featurelist)
         layert.triggerRepaint()
         i += 1
-        print("route nr",i-1)
-        print("nr included max ",dummy)
-
+        print("route nr", i - 1)
+        print("nr included max ", dummy)
 
     # Start node
     start_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,1)) AS start \
@@ -159,7 +171,6 @@ def printRoutes():
     # update legend for layer
     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layer.id())
 
-
     # End Node
     end_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,-1)) AS start FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
     FROM result_table  WHERE path_seq = (SELECT max(path_seq) FROM result_table WHERE did=1) and did=1) AS foo")
@@ -181,7 +192,6 @@ def printRoutes():
     symbol.setSize(3)
     layere.triggerRepaint()
     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layere.id())
-
 
 
 def printRoutesRejoin():
@@ -221,7 +231,8 @@ def printRoutesRejoin():
 
         # Routes in need of offset
         sqlcall = "(select lid, did, geom from result_table where lid in (select lid from result_table \
-               group by lid having count(*) > 1) and did=" + str(i) + " and rejoin_link=0 group by lid, did, geom ORDER BY lid, did)"
+               group by lid having count(*) > 1) and did=" + str(
+            i) + " and rejoin_link=0 group by lid, did, geom ORDER BY lid, did)"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
         layert = QgsVectorLayer(uri.uri(), " route " + str(i), "postgres")
         QgsProject.instance().addMapLayer(layert)
@@ -248,7 +259,6 @@ def printRoutesRejoin():
         #     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layert.id())
         #
         i = i + 1
-
 
     # Start node
     start_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,1)) AS start \
@@ -280,7 +290,6 @@ def printRoutesRejoin():
     # update legend for layer
     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layer.id())
 
-
     # End Node
     end_q = db.exec_("SELECT lid, ST_astext(ST_PointN(the_geom,-1)) AS start FROM (SELECT lid, (ST_Dump(geom)).geom As the_geom \
        FROM result_table  WHERE path_seq = (SELECT max(path_seq) FROM result_table WHERE did=1) and did=1) AS foo")
@@ -309,10 +318,7 @@ def printRoutesRejoin():
     layer.triggerRepaint()
     qgis.utils.iface.layerTreeView().refreshLayerSymbology(layere.id())
 
-        
-        
-    
-    
+
 # det jag behöver få från databasen start_list, end_list, lids
 def print_selected_pairs():
     # Removes layers not specified in removeRoutesLayers
@@ -332,7 +338,6 @@ def print_selected_pairs():
     while temp_query2.next():
         start_list.append(temp_query2.value(0))
         end_list.append(temp_query2.value(1))
-
 
     # first it creates neccessary db-tables for visualization of the OD-pairs in star_list and end_list
     # Create OD_lines table
@@ -363,7 +368,7 @@ def print_selected_pairs():
 
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
-    layer = QgsVectorLayer(uri.uri(), "result_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "result_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
@@ -371,8 +376,8 @@ def print_selected_pairs():
         ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
         ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('Alternative route: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
-        ('Alternative route: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
+        ('Alternative route: 1-10 % deterioration', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Alternative route: 10-100 % deterioration', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
     )
 
     # create a category for each item in values
@@ -394,9 +399,10 @@ def print_selected_pairs():
     layert = QgsVectorLayer(uri.uri(), " OD_pairs ", "postgres")
     QgsProject.instance().addMapLayer(layert)
 
+
 # Ska hämtas från databasen list,removed_lids
 def allToAll():
-    #Removes layers not specified in removeRoutesLayers
+    # Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
 
     # Get list and removed lids
@@ -412,48 +418,48 @@ def allToAll():
     while temp_query2.next():
         list.append(temp_query2.value(0))
 
-
     removed_lid_string = "( lid = " + str(removed_lids[0])
-    i=1
+    i = 1
     while i < len(removed_lids):
         removed_lid_string += " or lid =" + str(removed_lids[i])
-        i +=1
+        i += 1
     removed_lid_string += ")"
 
     # Queryn skapar tabell för alla länkar som går igenom removed_lid
     db.exec_("DROP TABLE IF EXIST temp_test")
     db.exec_(
         " select * into temp_test from all_results f where exists(select 1 from all_results l where " + removed_lid_string + " and"
-                                 " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
+                                                                                                                             " (f.start_zone = l.start_zone and f.end_zone = l.end_zone and f.did = l.did))")
 
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+    db.exec_(
+        "SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_deterioration, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
     i = 0
     while i < len(list):
         result = analysis_multiple_zones(list[i], list, removed_lids)
-        db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_no_routes = " +
-                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
-                str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
-                str(list[i] ) + ";")
-        i +=1
+        db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) + " , nr_no_routes = " +
+                 str(result[1]) + " , nr_all_routes_affected = " + str(result[2]) + " , mean_deterioration = " +
+                 str(result[3]) + " , nr_pairs = " + str(result[4]) + " WHERE id = " +
+                 str(list[i]) + ";")
+        i += 1
 
-    ############################ Create layer for mean impairment
+    ############################ Create layer for mean deterioration
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "mean_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean impairment 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
-        ('Mean impairment 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
-        ('Mean impairment 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+        ('No deterioration', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean deterioration 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
+        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
+        ('Mean deterioration 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
+        ('Mean deterioration 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -465,7 +471,7 @@ def allToAll():
         ranges.append(rng)
 
     ## create the renderer and assign it to a layer
-    expression = 'mean_impairment'  # field name
+    expression = 'mean_deterioration'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     ############################ Create layer for nr_affected OD-pairs
@@ -497,6 +503,7 @@ def allToAll():
     expression = 'prop_affected'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
+
 def odEffect(start, end, lids):
     start_zone = start
     end_zone = end
@@ -508,11 +515,11 @@ def odEffect(start, end, lids):
         i += 1
     removed_lid_string += ")"
 
-
     # Finding best, non-affected alternative route
     query1 = db.exec_("SELECT MIN(did) FROM all_results WHERE"
-                      " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                    " did NOT IN (select did from all_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
+                      " start_zone = " + str(start_zone) + " AND end_zone = " + str(end_zone) + " AND "
+                                                                                                " did NOT IN (select did from all_results where start_zone = " + str(
+        start_zone) + " AND end_zone = " + str(end_zone) + " AND  " + removed_lid_string + ")")
 
     query1.next()
     id_alt = str(query1.value(0))
@@ -555,6 +562,7 @@ def odEffect(start, end, lids):
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return float(cost_alt) / float(cost_opt)
 
+
 def analysis_multiple_zones(start_node, list, lids):
     count3 = 0
     count2 = 0
@@ -579,10 +587,11 @@ def analysis_multiple_zones(start_node, list, lids):
         i = i + 1
 
         if count_detour != 0:
-            mean_detour = sum_detour/count_detour
+            mean_detour = sum_detour / count_detour
         else:
             mean_detour = -1
-    return [count3,count2,count1, mean_detour, i-1]
+    return [count3, count2, count1, mean_detour, i - 1]
+
 
 # End of function definition
 
@@ -620,14 +629,14 @@ def main():
         removeRoutesLayers()
 
         # Create layer for one route set (run routeSetGeneration before).
-        printRoutes()
-        #printRoutesRejoin()
+        # printRoutes()
+        # printRoutesRejoin()
 
         # Creates new visualisation layer for selected pairs (run selectedODResultTable before).
-        #print_selected_pairs()
+        print_selected_pairs()
 
         # All to all visualisation for all pairs in list (run AllToAllResultTable before).
-        #allToAll()
+        # allToAll()
 
     toc()
 

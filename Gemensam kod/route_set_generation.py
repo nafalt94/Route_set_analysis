@@ -51,7 +51,9 @@ def removeRoutesLayers():
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
-            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid":
+            layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid"\
+                and str(layer.name()) != "Link used by 3 shortest paths" and str(layer.name()) != "Link used by 0 shortest paths"\
+                and str(layer.name()) != "OD_pairs":
             QgsProject.instance().removeMapLayer(layer.id())
 
 
@@ -299,7 +301,7 @@ def odEffect(start, end, lids):
         return (float(cost_alt) / float(cost_opt))
 
 
-# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_impairment, #pairs]
+# Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_deterioration, #pairs]
 def analysis_multiple_zones(start_node, list, lids):
     count3 = 0
     count2 = 0
@@ -364,7 +366,7 @@ def print_selected_pairs(start_list, end_list, lids):
 
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
-    layer = QgsVectorLayer(uri.uri(), "result_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "result_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
@@ -372,8 +374,8 @@ def print_selected_pairs(start_list, end_list, lids):
         ('No route', -2, -2, QColor.fromRgb(0, 225, 200)),
         ('No route that is not affected', -1, -1, QColor.fromRgb(255, 0, 0)),
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('Alternative route: 1-10 % impairment', 0, 1.1, QColor.fromRgb(102, 255, 102)),
-        ('Alternative route: 10-100 % impairment', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
+        ('Alternative route: 1-10 % deterioration', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Alternative route: 10-100 % deterioration', 1.1, 1000, QColor.fromRgb(255, 255, 0)),
     )
 
     # create a category for each item in values
@@ -446,31 +448,31 @@ def allToAll(list, removed_lids):
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_deterioration, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
     i = 0
     while i < len(list):
         result = analysis_multiple_zones(list[i], list, removed_lids)
         db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_no_routes = " +
-                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
+                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_deterioration = " +
                 str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
                 str(list[i] ) + ";")
         i +=1
 
-    ############################ Create layer for mean impairment
+    ############################ Create layer for mean deterioration
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "mean_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean impairment 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
-        ('Mean impairment 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
-        ('Mean impairment 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+        ('No deterioration', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean deterioration 1-10% ', 0, 1.1, QColor.fromRgb(102, 255, 102)),
+        ('Mean deterioration 10-20% ', 1.1, 1.2, QColor.fromRgb(255, 255, 153)),
+        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 178, 102)),
+        ('Mean deterioration 30-100% ', 1.3, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -482,7 +484,7 @@ def allToAll(list, removed_lids):
         ranges.append(rng)
 
     ## create the renderer and assign it to a layer
-    expression = 'mean_impairment'  # field name
+    expression = 'mean_deterioration'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     ############################ Create layer for nr_affected OD-pairs
@@ -534,33 +536,33 @@ def allToAllBigTest(list,removed_lids):
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
     db.exec_("DROP table if exists emme_results")
-    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_impairment, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+    db.exec_("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 as mean_deterioration, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
 
     i = 0
     while i < len(list):
         result = analysis_multiple_zones(list[i], list, removed_lids)
         db.exec_("UPDATE emme_results SET nr_non_affected = " + str(result[0]) +" , nr_no_routes = " +
-                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_impairment = " +
+                str(result[1]) + " , nr_all_routes_affected = " +  str(result[2]) +" , mean_deterioration = " +
                 str(result[3]) + " , nr_pairs = " +  str(result[4]) + " WHERE id = "+
                 str(list[i] ) + ";")
         i +=1
 
 
-    # Create layer for mean impairment
+    # Create layer for mean deterioration
     sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "mean_impairment ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
         ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('No impairment', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean impairment 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
-        ('Mean impairment 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
-        ('Mean impairment 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
-        ('Mean impairment 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
+        ('No deterioration', -1, -1, QColor.fromRgb(153, 204, 255)),
+        ('Mean deterioration 1-20% ', 0, 1.2, QColor.fromRgb(102, 255, 102)),
+        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 255, 153)),
+        ('Mean deterioration 30-50% ', 1.3, 1.5, QColor.fromRgb(255, 178, 102)),
+        ('Mean deterioration 50-100% ', 1.5, 100, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
@@ -572,7 +574,7 @@ def allToAllBigTest(list,removed_lids):
         ranges.append(rng)
 
     ## create the renderer and assign it to a layer
-    expression = 'mean_impairment'  # field name
+    expression = 'mean_deterioration'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     # Create layer for nr_affected OD-pairs
@@ -893,31 +895,35 @@ def main():
         # end_list = [6820, 7585, 7635, 6870, 6937, 7170, 7161, 7539, 7886, 7946, 6973, 7308, 7661]
 
         # Långa OD-par
-        start_list = [7472, 7815,7128,7801,7707,7509,7304,7151,7487,7737]
-        end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
+        # start_list = [7472, 7815,7128,7801,7707,7509,7304,7151,7487,7737]
+        # end_list = [7556,7635,6912,7603, 6976, 7174,7680,7053,7282,6822]
 
         # Nya Långa OD-par
         # start_list = [7487, 7166,7721,7302]
         # end_list = [7282, 7506,7817,7782]
 
 
-        list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227]
+        list = [8005, 7195,6884, 6837, 6776, 7835, 7864, 6955,7570,7422,7680,7557,7560,6879,6816, 7630,7162,7187,7227, 7079]
         #list = [6904, 6884, 6837, 6776, 7835]
 
         removed_lid = 89227  # Götgatan
-        removed_lid = [830259]  # Söderledstunneln
+        #removed_lids = [830259]  # Söderledstunneln
 
 
         # [81488, 83171] för Essingeleden
         # [83025, 84145] för Söderleden
         removed_lids = [83025, 84145]
-        #selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
 
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
         db.exec_("DROP TABLE if exists all_results")
         db.exec_("DROP TABLE if exists cost_table")
+
+        start_list = [6884, 6922, 6904, 6968]
+        end_list = [7877,7630, 6837, 6877]
+
+        #selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
 
 
         my_list = [0.01, 0.05, 0.2, 0.4, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 3, 5, 10]
@@ -926,8 +932,8 @@ def main():
 
         #selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
         #excelStats(start_list, end_list, my_list,threshold)
-        # allToAllResultTable(list,my,threshold)
-        # allToAll(list, removed_lids)
+        allToAllResultTable(list,my,threshold)
+        allToAll(list, removed_lids)
 
         start_zone = 7487
         end_zone = 7282
