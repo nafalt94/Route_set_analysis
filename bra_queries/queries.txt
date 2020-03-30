@@ -49,3 +49,14 @@ SELECT s.*
 where  exists (
     select 1 from all_results l where lid = 83025 and (f.start_zone = l.start_zone 
 									and f.end_zone = l.end_zone and f.did = l.did))
+									
+									
+# För att sätta alla OD-par till -1 dvs ej behandlade
+WITH cte AS (
+   select * from all_od_pairs   
+   where EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL
+   )
+UPDATE all_od_pairs a
+SET    status = -1, time_updated = NOW()
+FROM   cte
+WHERE  cte.id = a.id;
