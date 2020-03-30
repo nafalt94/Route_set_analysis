@@ -1,8 +1,16 @@
+CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id 
+                ORDER BY id, distance) AS score, id, lid, start_node, distance 
+                FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS 
+                distance FROM model_graph, (SELECT id, ST_centroid(geom) AS 
+                emme_centroid, geom AS emme_geom FROM emme_zones WHERE id > 0) AS emme 
+                WHERE ST_Intersects(geom, emme_geom) ORDER BY distance, lid desc) AS subq) AS subq 
+                WHERE score = 1)
+
 drop table all_od_pairs
 
 SELECT a.id as origin, b.id as destination
 INTO all_od_pairs from emme_zones a 
-CROSS JOIN (select * FROM emme_zones) b WHERE a.id != b.id limit 100
+CROSS JOIN (select * FROM emme_zones) b WHERE a.id != b.id ORDER BY RANDOM() limit 100
  
  ALTER TABLE all_od_pairs ADD COLUMN id SERIAL PRIMARY KEY;
  
@@ -10,5 +18,6 @@ CROSS JOIN (select * FROM emme_zones) b WHERE a.id != b.id limit 100
 
 ALTER TABLE all_od_pairs ADD COLUMN time_updated timestamp with time zone
 
+UPDATE all_od_pairs SET status = -1
 
 select * from all_od_pairs
