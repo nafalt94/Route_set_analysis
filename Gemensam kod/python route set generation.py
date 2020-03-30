@@ -71,8 +71,9 @@ def genonenode(zone):
     if result is not None:
         node = result[0]
     else:
-        raise Exception('No node in zones:' + str(zone))
-
+        #raise Exception('No node in zones:' + str(zone))
+        print("No node in zones:"+ str(zone))
+        node = None
     # # Saving SQL answer into matrix
     # while query1.next():
     #     counter1 += 1
@@ -1226,7 +1227,7 @@ def generateRandomOd():
         counter += 1
     return start_list,end_list
 
-def fetch_update():
+def fetch_update(my, threshold, max_overlap):
     mac = get_mac()
 
     #
@@ -1235,10 +1236,12 @@ def fetch_update():
                 "UPDATE all_od_pairs a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
 
     cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status = "+str(mac))
-
-
     dummy = cur.fetchall()
-    print(str(dummy))
+    if dummy[0][0] is None or dummy[0][1] is None:
+        cur.execute("UPDATE all_od_pairs SET status=1337")
+    else:
+        routeSetGeneration(dummy[0][0], dummy[0][1], my, threshold, max_overlap)
+        #print(str(dummy))
 
 
 # End of function definitions
@@ -1262,7 +1265,12 @@ def main():
     start = 7852  # 7183
     end = 7987 # 7543
 
-    fetch_update()
+    cur.execute("UPDATE all_od_pairs SET status = -1")
+    cur.execute("UPDATE all_od_pairs SET time_updated  = null")
+    i = 0
+    while i < 100:
+        fetch_update(my, threshold, max_overlap)
+        i += 1
 
     start_zone = 7815
     end_zone = 7798

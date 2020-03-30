@@ -1,0 +1,14 @@
+drop table all_od_pairs
+
+SELECT a.id as origin, b.id as destination
+INTO all_od_pairs from emme_zones a 
+CROSS JOIN (select * FROM emme_zones) b WHERE a.id != b.id limit 100
+ 
+ ALTER TABLE all_od_pairs ADD COLUMN id SERIAL PRIMARY KEY;
+ 
+ ALTER TABLE all_od_pairs ADD COLUMN status BIGINT
+
+ALTER TABLE all_od_pairs ADD COLUMN time_updated timestamp with time zone
+
+
+select * from all_od_pairs
