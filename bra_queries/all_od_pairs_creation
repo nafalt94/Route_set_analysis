@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PA
 drop table all_od_pairs
 
 SELECT a.id as origin, b.id as destination
-INTO all_od_pairs from emme_zones a 
-CROSS JOIN (select * FROM emme_zones) b WHERE a.id != b.id ORDER BY RANDOM() limit 100
+INTO all_od_pairs from od_lid a 
+CROSS JOIN (select * FROM od_lid) b WHERE a.id != b.id ORDER BY RANDOM() limit 100
  
  ALTER TABLE all_od_pairs ADD COLUMN id SERIAL PRIMARY KEY;
  
