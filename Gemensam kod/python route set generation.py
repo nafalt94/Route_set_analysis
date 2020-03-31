@@ -1304,11 +1304,7 @@ def main():
     cur.execute("UPDATE all_od_pairs SET time_updated  = null")
 
     #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
-    fetch_update(my, threshold, max_overlap,1000)
-    i = 0
-    while i < 100:
-        #fetch_update(my, threshold, max_overlap)
-        i += 1
+    fetch_update(my, threshold, max_overlap,100)
 
     start_zone = 7815
     end_zone = 7798
