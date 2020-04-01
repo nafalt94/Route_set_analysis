@@ -87,9 +87,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
-    print("Start zone is:"+str(start_zone))
-    print("End zone is:"+str(end_zone))
-    print("Start node is: "+str(start)+" End node is: "+str(end))
+    # print("Start zone is:"+str(start_zone))
+    # print("End zone is:"+str(end_zone))
+    # print("Start node is: "+str(start)+" End node is: "+str(end))
 
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
@@ -97,16 +97,12 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
      link_cost AS cost, 1000000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
      INNER JOIN cost_table ON(edge = lid)")
 
-
-
     # Getting total cost for route 1 and setting first stop criterion.
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
 
     route1_cost = cur.fetchone()[0]
-    print("Current cost route 1: " + str(route1_cost))
+    # print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
-
-
 
     cur.execute("SELECT max(agg_cost) FROM temp_table1")
     reverse = cur.fetchone()[0]
@@ -177,7 +173,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
             route_stop = cur.fetchone()[0]
 
-            print("Current cost route " + str(i) + ": " + str(route_stop))
+            #print("Current cost route " + str(i) + ": " + str(route_stop))
 
 
             if comp(route_stop, route1_cost, threshold):
@@ -234,10 +230,10 @@ def fetch_update(limit):
     #print("assignment: "+str(assignment))
 
     if not assignment:
-        print("gick den in?")
-        cur_remote.execute("WITH cte AS (select * from all_od_pairs "
+        cur_remote.execute("WITH cte AS (select * from all_od_pairs_test "
                     "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
                     "UPDATE all_od_pairs_test a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+        conn_remote.commit()
 
         cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
@@ -252,18 +248,11 @@ def generate_assignments(my, threshold, max_overlap,assignment):
         status.append(routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap))
         i += 1
 
+    print("Klar med ruttgenereringen")
     return status
 
 def update_result(assignment, status):
-    origin = [r[0] for r in assignment]
-    destination = [r[1] for r in assignment]
 
-    cur_remote.execute("create temporary table temp_table as select unnest(ARRAY["+str(origin)+"]) as origin,"
-                      " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
-
-    cur_remote.execute("UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
-                       " WHERE all_od_pairs_test.origin = temp_table.origin and "
-                       " all_od_pairs_test.destination = temp_table.destination ")
     cur.execute("SELECT * FROM all_results")
 
     all_results = []
@@ -286,7 +275,16 @@ def update_result(assignment, status):
 
     cur_remote.execute("INSERT into remote_results select * from "+string_conc)
 
+    # Update all_od_pairs
+    origin = [r[0] for r in assignment]
+    destination = [r[1] for r in assignment]
 
+    cur_remote.execute("create temporary table temp_table as select unnest(ARRAY["+str(origin)+"]) as origin,"
+                      " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
+
+    cur_remote.execute("UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
+                       " WHERE all_od_pairs_test.origin = temp_table.origin and "
+                       " all_od_pairs_test.destination = temp_table.destination ")
 
 # End of function definitions
 
@@ -309,11 +307,11 @@ def main():
     max_overlap  = 0.8
 
     cur.execute("DROP TABLE if exists all_results")
-    cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
-    cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
+    #cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
+    #cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
 
     #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
-    assignment=fetch_update(100)
+    assignment=fetch_update(10)
     status = generate_assignments(my, threshold, max_overlap,assignment)
     update_result(assignment, status)
 
