@@ -264,11 +264,27 @@ def update_result(assignment, status):
     cur_remote.execute("UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
                        " WHERE all_od_pairs_test.origin = temp_table.origin and "
                        " all_od_pairs_test.destination = temp_table.destination ")
-
     cur.execute("SELECT * FROM all_results")
-    lid = [r[3] for r in cur.fetchall()]
 
-    cur_remote.execute("INSERT into remote_results select * from unnest(ARRAY["+str(lid)+"])")
+    all_results = []
+    i = 0
+    while i < 14:
+        if i == 12:
+            all_results.append([float(r[i]) for r in cur.fetchall()])
+        else:
+            all_results.append([r[i] for r in cur.fetchall()])
+        cur.execute("SELECT * FROM all_results")
+        #print(str((all_results[i])))
+        i +=1
+
+    string_conc = "unnest(ARRAY["+str(all_results[0] )+"]"
+    i = 1
+    while i < 14:
+        string_conc += ", (ARRAY["+str(all_results[i] )+"])"
+        i += 1
+    string_conc += ")"
+
+    cur_remote.execute("INSERT into remote_results select * from "+string_conc)
 
 
 
@@ -293,8 +309,8 @@ def main():
     max_overlap  = 0.8
 
     cur.execute("DROP TABLE if exists all_results")
-    cur.execute("UPDATE all_od_pairs SET status = -1")
-    cur.execute("UPDATE all_od_pairs SET time_updated  = null")
+    cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
+    cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
 
     #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
     assignment=fetch_update(100)
