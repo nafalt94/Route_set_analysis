@@ -124,7 +124,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         # # Pen cost as breaking if stuck instead of nr_routes
         # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
         # pen_q.next()
-        # # print("Pencost för rutt: "+str(pen_q.value(0)))
+        # # print("Pencost for rutt: "+str(pen_q.value(0)))
         # pen_stop = pen_q.value(0)
 
         # Calculationg alternative routes
@@ -191,7 +191,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
                     i = i + 1
                     nr_routes = nr_routes + 1
-                    # print("HÄR ÄR VI")
+                    # print("HaR aR VI")
                     overlap_count = 0
                 else:
                     cur.execute(
