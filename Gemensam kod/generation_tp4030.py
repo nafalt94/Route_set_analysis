@@ -230,7 +230,7 @@ def fetch_update(limit):
 
     #Check if any assignments needs to be finished
     cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
-    assignment = cur.fetchall()
+    assignment = cur_remote.fetchall()
     #print("assignment: "+str(assignment))
 
     if not assignment:
@@ -242,9 +242,9 @@ def fetch_update(limit):
         cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
 
-        return assignment
+    return assignment
 
-def generate_assignmnets(my, threshold, max_overlap,assignment):
+def generate_assignments(my, threshold, max_overlap,assignment):
 
     status = []
     i = 0
@@ -255,17 +255,31 @@ def generate_assignmnets(my, threshold, max_overlap,assignment):
     return status
 
 def update_result(assignment, status):
-    print("update")
-    print(str(assignment))
-    print(str(status))
+    origin = [r[0] for r in assignment]
+    destination = [r[1] for r in assignment]
+
+    cur_remote.execute("create temporary table temp_table as select unnest(ARRAY["+str(origin)+"]) as origin,"
+                      " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
+
+    cur_remote.execute("UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
+                       " WHERE all_od_pairs_test.origin = temp_table.origin and "
+                       " all_od_pairs_test.destination = temp_table.destination ")
+
+    cur.execute("SELECT * FROM all_results")
+    lid = [r[3] for r in cur.fetchall()]
+
+    cur_remote.execute("INSERT into remote_results select * from unnest(ARRAY["+str(lid)+"])")
+
+
+
 # End of function definitions
 
 # Connection global to be used everywhere.
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123")
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 conn.autocommit = True
 cur = conn.cursor()
 
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
@@ -283,9 +297,10 @@ def main():
     cur.execute("UPDATE all_od_pairs SET time_updated  = null")
 
     #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
-    assignment=fetch_update(5)
-    status = generate_assignmnets(my, threshold, max_overlap,assignment)
+    assignment=fetch_update(100)
+    status = generate_assignments(my, threshold, max_overlap,assignment)
     update_result(assignment, status)
+
 
 
 if __name__ == "__main__" or __name__ == "__console__":
