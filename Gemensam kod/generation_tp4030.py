@@ -289,14 +289,19 @@ def update_result(assignment, status):
 # End of function definitions
 
 # Connection global to be used everywhere.
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+#TP4030
+conn = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5432)
+#Gustav och Mattias
+#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 conn.autocommit = True
 cur = conn.cursor()
 
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+#TP4030
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123",port=5432)
+#Gustav och Mattias
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
-
 
 def main():
     tic()
@@ -314,7 +319,6 @@ def main():
     assignment=fetch_update(10)
     status = generate_assignments(my, threshold, max_overlap,assignment)
     update_result(assignment, status)
-
 
 
 if __name__ == "__main__" or __name__ == "__console__":
