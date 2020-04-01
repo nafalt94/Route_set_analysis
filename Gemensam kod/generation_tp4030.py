@@ -225,44 +225,49 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     else:
         return 3
 
-def fetch_update(my, threshold, max_overlap, limit):
+def fetch_update(limit):
     mac = get_mac()
 
     #Check if any assignments needs to be finished
-    cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status = "+str(mac))
+    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
     assignment = cur.fetchall()
     #print("assignment: "+str(assignment))
 
     if not assignment:
         print("gick den in?")
-        cur.execute("WITH cte AS (select * from all_od_pairs "
+        cur_remote.execute("WITH cte AS (select * from all_od_pairs "
                     "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
-                    "UPDATE all_od_pairs a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+                    "UPDATE all_od_pairs_test a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
 
-        cur.execute("SELECT origin, destination FROM all_od_pairs WHERE status = "+str(mac))
-        assignment = cur.fetchall()
+        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
+        assignment = cur_remote.fetchall()
 
-    # print(len(assignment))
-    # print(assignment)
+        return assignment
+
+def generate_assignmnets(my, threshold, max_overlap,assignment):
+
+    status = []
     i = 0
     while i < len(assignment):
-        if routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap) == 1:
-            cur.execute("UPDATE all_od_pairs SET status=1 WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
-        elif routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap) == 2:
-            cur.execute("UPDATE all_od_pairs SET status=2 WHERE origin = " + str(assignment[i][0]) + " and destination = " + str(assignment[i][1]))
-        else:
-            cur.execute("UPDATE all_od_pairs SET status=3 WHERE origin = " +str(assignment[i][0])+ " and destination = " +str(assignment[i][1]))
+        status.append(routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap))
+        i += 1
 
-        cur.execute("UPDATE all_od_pairs SET time_updated=NOW() WHERE origin = " + str(assignment[i][0]) + " and destination = " + str(assignment[i][1]))
-        i +=1
+    return status
 
-    conn.commit()
+def update_result(assignment, status):
+    print("update")
+    print(str(assignment))
+    print(str(status))
 # End of function definitions
 
 # Connection global to be used everywhere.
 conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123")
 conn.autocommit = True
 cur = conn.cursor()
+
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123")
+conn_remote.autocommit = True
+cur_remote = conn_remote.cursor()
 
 
 def main():
@@ -278,7 +283,9 @@ def main():
     cur.execute("UPDATE all_od_pairs SET time_updated  = null")
 
     #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
-    fetch_update(my, threshold, max_overlap,5)
+    assignment=fetch_update(5)
+    status = generate_assignmnets(my, threshold, max_overlap,assignment)
+    update_result(assignment, status)
 
 
 if __name__ == "__main__" or __name__ == "__console__":
