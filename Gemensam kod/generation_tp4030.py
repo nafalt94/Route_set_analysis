@@ -273,7 +273,7 @@ def update_result(assignment, status):
         i += 1
     string_conc += ")"
 
-    cur_remote.execute("INSERT into remote_results select * from "+string_conc)
+    cur_remote.execute("INSERT into remote_results select * from "+string_conc +" ON CONFLICT DO NOTHING")
 
     # Update all_od_pairs
     origin = [r[0] for r in assignment]
@@ -312,19 +312,19 @@ def main():
     threshold = 1.3
     max_overlap  = 0.8
 
-    cur.execute("DROP TABLE if exists all_results")
     #cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
     #cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
 
     i = 0
     while i<1:
-        assignment=fetch_update(100)
+        cur.execute("DROP TABLE if exists all_results")
+        assignment=fetch_update(50)
         status = generate_assignments(my, threshold, max_overlap,assignment)
         update_result(assignment, status)
 
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        print("Klar med 100st kl: " + dt_string)
+        print("Klar med 50st kl: " + dt_string)
 
 
 
