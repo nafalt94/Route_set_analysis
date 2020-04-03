@@ -321,15 +321,18 @@ def main():
 
     i = 0
     while i<1:
-        cur.execute("DROP TABLE if exists all_results")
-        assignment=fetch_update(100)
+        try:
+            cur.execute("DROP TABLE if exists all_results")
+            assignment=fetch_update(100)
 
-        status = generate_assignments(my, threshold, max_overlap,assignment)
-        update_result(assignment, status)
+            status = generate_assignments(my, threshold, max_overlap,assignment)
+            update_result(assignment, status)
 
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        print("Klar med 100st kl: " + dt_string)
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print("Klar med 100st kl: " + dt_string)
+        except ValueError:
+            print("Exception i While loop :O ")
 
 
 
