@@ -324,7 +324,7 @@ def main():
     while i<1:
         try:
             cur.execute("DROP TABLE if exists all_results")
-            assignment=fetch_update(100)
+            assignment=fetch_update(3000)
         
             if not assignment:
                 break
@@ -335,8 +335,9 @@ def main():
             now = datetime.now()
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
-            print("Klar med 100st kl: " + dt_string)
+            print("Klar med 50st kl: " + dt_string)
         except Exception as exptest:
+            cur_remote.execute("DROP TABLE if exists temp_table")
             print("Exception i While loop "+ str(exptest))
 
 

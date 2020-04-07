@@ -1281,7 +1281,7 @@ def fetch_update(my, threshold, max_overlap, limit):
 # End of function definitions
 
 # Connection global to be used everywhere.
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123")
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 conn.autocommit = True
 cur = conn.cursor()
 

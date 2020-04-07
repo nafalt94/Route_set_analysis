@@ -917,7 +917,7 @@ def main():
         # allToAllResultTable(list,my,threshold)
         # allToAll(list, removed_lids)
         #___________________________________________________________________________________________________________________
-        db.exec_("DROP TABLE if exists all_results")
+        #db.exec_("DROP TABLE if exists all_results")
         db.exec_("DROP TABLE if exists cost_table")
 
         start_list = [6884, 6922, 6904, 6968]
