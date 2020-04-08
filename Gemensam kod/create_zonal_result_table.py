@@ -39,6 +39,13 @@ def createEmmeResults(origins,destinations, removed_lids):
     # cur_remote.execute("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 "
     #                    "as mean_deterioration, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
 
+    removed_lid_string = "( lid = " + str(removed_lids[0])
+    i = 1
+    while i < len(removed_lids):
+        removed_lid_string += " or lid =" + str(removed_lids[i])
+        i += 1
+    removed_lid_string += ")"
+
     i = 0
     sum = 0
     count = 0
@@ -47,9 +54,9 @@ def createEmmeResults(origins,destinations, removed_lids):
         # Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_deterioration, #pairs]
         #[count3,count2,count1, mean_detour, i-1]
 
-        effect = odEffect(origins[i], destinations[i], removed_lids)
-        if odEffect(origins[i], destinations[i], removed_lids) != -1:
-            sum += odEffect(origins[i], destinations[i], removed_lids)
+        effect = odEffect(origins[i], destinations[i], removed_lid_string)
+        if effect != -1:
+            sum += effect
             count += 1
 
         #if last iteration, terminate and if last pair of current start_zone, update and go to next
@@ -59,9 +66,9 @@ def createEmmeResults(origins,destinations, removed_lids):
             if sum == 0:
                 mean_det = -1
             else:
-                mean_det = sum / count
+                mean_det = sum/count
             # result is: [?,?,?,mean_deterioration,?]
-            result = [0, 0, 0, mean_det, 0]
+            result = [1, 0, 0, mean_det, 0]
             cur_remote.execute("UPDATE emme_results SET nr_non_affected = " + str(result[0]) + " , nr_no_routes = " +
                 str(result[1]) + " , nr_all_routes_affected = " +
                 str(result[2]) + " , mean_deterioration = " +
@@ -78,10 +85,17 @@ def analysis_multiple_zones(start_node, list, lids):
     count_detour = 0
     sum_detour = 0
 
+    removed_lid_string = "( lid = " + str(lids[0])
+    i = 1
+    while i < len(lids):
+        removed_lid_string += " or lid =" + str(lids[i])
+        i += 1
+    removed_lid_string += ")"
+
     i = 0
     while i < len(list):
         if start_node != list[i]:
-            result_test = odEffect(start_node, list[i], lids)
+            result_test = odEffect(start_node, list[i], removed_lid_string)
 
             if result_test == -3:
                 count3 += 1
@@ -100,27 +114,21 @@ def analysis_multiple_zones(start_node, list, lids):
             mean_detour = -1
     return [count3,count2,count1, mean_detour, i-1]
 
-def odEffect(start, end, lids):
-    print("Hej fr. odEffect")
+def odEffect(start, end, removed_lid_string):
     start_zone = start
     end_zone = end
 
-    removed_lid_string = "( lid = " + str(lids[0])
-    i = 1
-    while i < len(lids):
-        removed_lid_string += " or lid =" + str(lids[i])
-        i += 1
-    removed_lid_string += ")"
-
     # Finding best, non-affected alternative route
-    cur_remote.execute("SELECT MIN(did) FROM remote_results WHERE"
+    cur_remote.execute("SELECT MIN(did) FROM remote_results WHERE "
                       " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
                     " did NOT IN (select did from remote_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
 
     id_alt = str(cur_remote.fetchone()[0])
     print("id_alt är: "+ id_alt)
+    print("start är " + str(start))
 
     if id_alt == "None":
+        print("gick in för none")
         return -1
     else:
         # print("Zon påverkas och bästa id är:" + id_alt)
