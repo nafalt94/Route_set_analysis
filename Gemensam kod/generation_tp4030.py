@@ -250,9 +250,7 @@ def generate_assignments(my, threshold, max_overlap,assignment):
 
     print("Klar med ruttgenereringen")
     return status
-
-def update_result(assignment, status):
-
+def insert_results():
     cur.execute("SELECT * FROM all_results")
 
     all_results = []
@@ -274,7 +272,33 @@ def update_result(assignment, status):
     string_conc += ")"
 
 
-    cur_remote.execute("INSERT into remote_results select * from "+string_conc +" ON CONFLICT DO NOTHING")
+    cur_remote.execute("INSERT into remote_results_test select * from "+string_conc +" ON CONFLICT DO NOTHING")
+    print("All results inserted!")
+
+def update_result(assignment, status):
+
+    # cur.execute("SELECT * FROM all_results")
+    #
+    # all_results = []
+    # i = 0
+    # while i < 14:
+    #     if i == 12:
+    #         all_results.append([float(r[i]) for r in cur.fetchall()])
+    #     else:
+    #         all_results.append([r[i] for r in cur.fetchall()])
+    #     cur.execute("SELECT * FROM all_results")
+    #     #print(str((all_results[i])))
+    #     i +=1
+    #
+    # string_conc = "unnest(ARRAY["+str(all_results[0] )+"]"
+    # i = 1
+    # while i < 14:
+    #     string_conc += ", (ARRAY["+str(all_results[i] )+"])"
+    #     i += 1
+    # string_conc += ")"
+    #
+    #
+    # cur_remote.execute("INSERT into remote_results select * from "+string_conc +" ON CONFLICT DO NOTHING")
 
     # Update all_od_pairs
     origin = [r[0] for r in assignment]
@@ -292,19 +316,19 @@ def update_result(assignment, status):
 
 # Connection global to be used everywhere.
 #TP4030
-#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
@@ -316,15 +340,18 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap  = 0.8
-
+    limit = 500
     #cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
     #cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
 
     i = 0
     while i<1:
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        print("Start: " + dt_string)
         try:
             cur.execute("DROP TABLE if exists all_results")
-            assignment=fetch_update(3000)
+            assignment=fetch_update(limit)
         
             if not assignment:
                 break
@@ -334,11 +361,13 @@ def main():
 
             now = datetime.now()
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            insert_results()
+            print("Klar med "+str(limit)+"st kl: " + dt_string)
 
-            print("Klar med 50st kl: " + dt_string)
         except Exception as exptest:
             cur_remote.execute("DROP TABLE if exists temp_table")
             print("Exception i While loop "+ str(exptest))
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
 
 
