@@ -1,1 +1,4 @@
 
+DROP table if exists emme_results
+SELECT 0 as nr_all_routes_affected, 0.0 as mean_deterioration, 0 as nr_affected,* INTO emme_results FROM emme_zones
+create index id_idx on emme_results (id)
