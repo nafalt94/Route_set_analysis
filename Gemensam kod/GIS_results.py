@@ -67,12 +67,12 @@ def allToAll():
     QgsProject.instance().addMapLayer(layer)
 
     values = (
-        ('Not searched', 0, 0, QColor.fromRgb(255, 255, 255)),
-        ('No deterioration', -1, -1, QColor.fromRgb(153, 204, 255)),
-        ('Mean deterioration 1-10% ', 0, 1.1, QColor.fromRgb(102, 255, 102)),
-        ('Mean deterioration 10-20% ', 1.1, 1.2, QColor.fromRgb(255, 255, 153)),
-        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 178, 102)),
-        ('Mean deterioration 30-100% ', 1.3, 100, QColor.fromRgb(255, 102, 102)),
+        ('No deterioration', 0, 0, QColor.fromRgb(153, 204, 255)),
+        ('Mean deterioration 1-5% ', 1, 1.05, QColor.fromRgb(102, 255, 102)),
+        ('Mean deterioration 5-10% ', 1.05, 1.1, QColor.fromRgb(255, 255, 153)),
+        ('Mean deterioration 10-20% ', 1.1, 1.2, QColor.fromRgb(255, 178, 102)),
+        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 102, 102)),
+        ('All routes affected ', -1, -1, QColor.fromRgb(0, 0, 0)),
     )
 
     # create a category for each item in values
@@ -88,18 +88,18 @@ def allToAll():
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     ############################ Create layer for nr_affected OD-pairs
+    sqlcall = "(SELECT * FROM emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
     layer = QgsVectorLayer(uri.uri(), "nr_affected ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
-        ('Not searched', -1, -1, QColor.fromRgb(255, 255, 255)),
         ('0 affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
         ('1 affected pairs', 1, 1, QColor.fromRgb(102, 255, 102)),
         ('1-5 affected pairs', 1, 5, QColor.fromRgb(255, 255, 153)),
         ('5-10 affected pairs', 5, 10, QColor.fromRgb(255, 178, 102)),
-        ('10-1000 affected pairs', 10, 100000, QColor.fromRgb(255, 102, 102)),
+        ('10-many affected pairs', 10, 100000, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
