@@ -234,21 +234,20 @@ def fetch_update(limit):
                     "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
                     "UPDATE all_od_pairs_test a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
         conn_remote.commit()
-
         cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
 
     return assignment
 
 def generate_assignments(my, threshold, max_overlap,assignment):
-
+    print("Starting route set generation")
     status = []
     i = 0
     while i < len(assignment):
         status.append(routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap))
         i += 1
 
-    print("Klar med ruttgenereringen")
+    print("Route set generation complete")
     return status
 def insert_results():
     cur.execute("SELECT * FROM all_results")
@@ -272,8 +271,11 @@ def insert_results():
     string_conc += ")"
 
 
+    print("Starting to insert results!")
     cur_remote.execute("INSERT into remote_results_test select * from "+string_conc +" ON CONFLICT DO NOTHING")
+    conn_remote.commit()
     print("All results inserted!")
+
 
 def update_result(assignment, status):
 
@@ -301,6 +303,7 @@ def update_result(assignment, status):
     # cur_remote.execute("INSERT into remote_results select * from "+string_conc +" ON CONFLICT DO NOTHING")
 
     # Update all_od_pairs
+    print("Updating results table")
     origin = [r[0] for r in assignment]
     destination = [r[1] for r in assignment]
 
@@ -311,6 +314,8 @@ def update_result(assignment, status):
                        " WHERE all_od_pairs_test.origin = temp_table.origin and "
                        " all_od_pairs_test.destination = temp_table.destination ")
     cur_remote.execute("DROP TABLE temp_table")
+    conn_remote.commit()
+    print("Update complete")
 
 # End of function definitions
 
@@ -330,7 +335,7 @@ conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user=
 #Gustav och Mattias
 #conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
-conn_remote.autocommit = True
+conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
 
 def main():
@@ -352,13 +357,12 @@ def main():
         try:
             cur.execute("DROP TABLE if exists all_results")
             assignment=fetch_update(limit)
-        
+
             if not assignment:
                 break
 
             status = generate_assignments(my, threshold, max_overlap,assignment)
             update_result(assignment, status)
-
             now = datetime.now()
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
             insert_results()
@@ -366,8 +370,10 @@ def main():
 
         except Exception as exptest:
             cur_remote.execute("DROP TABLE if exists temp_table")
+            conn_remote.commit()
             print("Exception i While loop "+ str(exptest))
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+
 
 
 
