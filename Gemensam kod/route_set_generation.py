@@ -932,7 +932,7 @@ def main():
 
         #selectedODResultTable(start_list, end_list,my,threshold,removed_lids)
         #excelStats(start_list, end_list, my_list,threshold)
-        allToAllResultTable(list,my,threshold)
+        #allToAllResultTable(list,my,threshold)
         allToAll(list, removed_lids)
 
         start_zone = 7487

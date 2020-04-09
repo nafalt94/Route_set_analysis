@@ -48,16 +48,17 @@ def createEmmeResults(origins,destinations, removed_lids):
 
     i = 0
     sum = 0
+    sum_all_affected = 0
     count = 0
 
     while i < len(origins):
-        # Returns [#non affected zones, #no routes in OD-pair, #all routes affected, mean_deterioration, #pairs]
-        #[count3,count2,count1, mean_detour, i-1]
 
         effect = odEffect(origins[i], destinations[i], removed_lid_string)
         if effect != -1:
             sum += effect
             count += 1
+        else:
+            sum_all_affected += 1
 
         #if last iteration, terminate and if last pair of current start_zone, update and go to next
         if (i == len(origins) - 1) or (origins[i] != origins[i + 1]):
@@ -67,52 +68,14 @@ def createEmmeResults(origins,destinations, removed_lids):
                 mean_det = -1
             else:
                 mean_det = sum/count
-            # result is: [?,?,?,mean_deterioration,?]
-            result = [1, 0, 0, mean_det, 0]
-            cur_remote.execute("UPDATE emme_results SET nr_non_affected = " + str(result[0]) + " , nr_no_routes = " +
-                str(result[1]) + " , nr_all_routes_affected = " +
-                str(result[2]) + " , mean_deterioration = " +
-                str(result[3]) + " , nr_pairs = " + str(result[4]) + " WHERE id = " +
-                str(origins[i]) + ";")
+            # result is: [nr all routes affected,mean_deterioration,nr affected OD-pairs]
+            result = [sum_all_affected,mean_det,count]
+            cur_remote.execute("UPDATE emme_results SET nr_all_routes_affected = " + str(result[0]) + " , mean_deterioration = " +
+                str(result[1]) + ",nr_affected = " + str(result[2]) + "  WHERE id = " + str(origins[i]) + ";")
             sum = 0
+            sum_all_affected = 0
             count = 0
         i += 1
-
-def analysis_multiple_zones(start_node, list, lids):
-    count3 = 0
-    count2 = 0
-    count1 = 0
-    count_detour = 0
-    sum_detour = 0
-
-    removed_lid_string = "( lid = " + str(lids[0])
-    i = 1
-    while i < len(lids):
-        removed_lid_string += " or lid =" + str(lids[i])
-        i += 1
-    removed_lid_string += ")"
-
-    i = 0
-    while i < len(list):
-        if start_node != list[i]:
-            result_test = odEffect(start_node, list[i], removed_lid_string)
-
-            if result_test == -3:
-                count3 += 1
-            elif result_test == -2:
-                count2 += 1
-            elif result_test == -1:
-                count1 += 1
-            else:
-                count_detour += 1
-                sum_detour += result_test
-        i = i + 1
-
-        if count_detour != 0:
-            mean_detour = sum_detour/count_detour
-        else:
-            mean_detour = -1
-    return [count3,count2,count1, mean_detour, i-1]
 
 def odEffect(start, end, removed_lid_string):
     start_zone = start
@@ -124,11 +87,11 @@ def odEffect(start, end, removed_lid_string):
                     " did NOT IN (select did from remote_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
 
     id_alt = str(cur_remote.fetchone()[0])
-    print("id_alt är: "+ id_alt)
-    print("start är " + str(start))
+    #print("id_alt är: "+ id_alt)
+    #print("start är " + str(start))
 
     if id_alt == "None":
-        print("gick in för none")
+        #print("gick in för none")
         return -1
     else:
         # print("Zon påverkas och bästa id är:" + id_alt)
@@ -158,7 +121,7 @@ def affected_pairs(lids):
     removed_lid_string += ")"
 
     # ORDER BY verkar ta tid. Att göra: indexera remote_results på start_zone
-    cur_remote.execute("select start_zone,end_zone from remote_results where did = 1 and " + removed_lid_string+" order by start_zone limit 20")
+    cur_remote.execute("select start_zone,end_zone from remote_results where did = 1 and " + removed_lid_string+" order by start_zone limit 1000")
 
     all_pairs = cur_remote.fetchall()
     origins = [r[0] for r in all_pairs]
