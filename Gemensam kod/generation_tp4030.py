@@ -272,43 +272,47 @@ def insert_results():
 
     print("Starting to insert results!")
     cur_remote.execute("BEGIN TRANSACTION; "
-                       "INSERT into remote_results_test select * from "+string_conc +" ON CONFLICT DO NOTHING "
+                       "INSERT into remote_results_test select * from "+string_conc +" ON CONFLICT DO NOTHING; "
                                                                                      " COMMIT ;")
     conn_remote.commit()
+    print("All results inserted!")
+
+def insert_results_row_wise():
+    cur.execute("SELECT * FROM all_results")
+    print("Starting to insert results!")
+
+    all_results = []
+    i = 0
+    while i < 14:
+        if i == 12:
+            all_results.append([float(r[i]) for r in cur.fetchall()])
+        else:
+            all_results.append([r[i] for r in cur.fetchall()])
+        cur.execute("SELECT * FROM all_results")
+        # print(str((all_results[i])))
+        i += 1
+
+    i = 0
+    while i < len(all_results[1]):
+        cur.execute("BEGIN TRANSACTION; "
+                           "INSERT into remote_results_test (did, start_zone, end_zone,lid,node,geom, cost,link_cost,start_node,"
+                    "end_node, path_seq,agg_cost,speed,fcn_class) values (" + str(all_results[0][i]) + ", "+str(all_results[1][i])+" "
+                                ", " +str(all_results[2][i])+ ", " +str(all_results[3][i])+  ", " +str(all_results[4][i])+ ", '" +str(all_results[5][i])+
+                    "', " +str(all_results[6][i])+ ", " +str(all_results[7][i])+ ", " +str(all_results[8][i])+ ", " +str(all_results[9][i])+
+                    ", " +str(all_results[10][i])+ ", " +str(all_results[11][i])+ ", " +str(all_results[12][i])+ ", " +str(all_results[13][i])+ ") "
+                                    " ON CONFLICT DO NOTHING;   COMMIT ;")
+        i +=1
+        conn.commit()
+
     print("All results inserted!")
 
 
 def update_result(assignment, status):
 
-    # cur.execute("SELECT * FROM all_results")
-    #
-    # all_results = []
-    # i = 0
-    # while i < 14:
-    #     if i == 12:
-    #         all_results.append([float(r[i]) for r in cur.fetchall()])
-    #     else:
-    #         all_results.append([r[i] for r in cur.fetchall()])
-    #     cur.execute("SELECT * FROM all_results")
-    #     #print(str((all_results[i])))
-    #     i +=1
-    #
-    # string_conc = "unnest(ARRAY["+str(all_results[0] )+"]"
-    # i = 1
-    # while i < 14:
-    #     string_conc += ", (ARRAY["+str(all_results[i] )+"])"
-    #     i += 1
-    # string_conc += ")"
-    #
-    #
-    # cur_remote.execute("INSERT into remote_results select * from "+string_conc +" ON CONFLICT DO NOTHING")
-
     # Update all_od_pairs
     print("Updating results table")
     origin = [r[0] for r in assignment]
     destination = [r[1] for r in assignment]
-
-    mac = get_mac()
 
     cur_remote.execute("create temporary table temp_table as select unnest(ARRAY["+str(origin)+"]) as origin,"
                       " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
@@ -350,7 +354,7 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap  = 0.8
-    limit = 5
+    limit = 100
     #cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
     #cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
 
