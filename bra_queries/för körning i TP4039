@@ -1,20 +1,22 @@
 drop table all_od_pairs_test
-select * into all_od_pairs_test from all_od_pairs limit 10000
+select * into all_od_pairs_test from all_od_pairs limit 50000;
+ALTER TABLE all_od_pairs_test ADD PRIMARY KEY (origin,destination);
+CREATE INDEX idx_od ON all_od_pairs_test (origin,destination);
 
-select * from all_od_pairs_test
+select * from all_od_pairs_test limit 10
 
-
-drop table remote_results
-CREATE TABLE IF NOT EXISTS remote_results(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, 
+drop table remote_results_test
+CREATE TABLE IF NOT EXISTS remote_results_test(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, 
                geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, 
                speed numeric, fcn_class BIGINT, my DOUBLE PRECISION, time DOUBLE PRECISION, PRIMARY KEY (start_zone, end_zone,did, path_seq))
 			   
-select * from remote_results
+select * from remote_results_test limit 10
 
 
-SELECT status,
-   100.0 * COUNT(*)        
-   / SUM(COUNT(*)) OVER () 
-   As "Percentage"
-FROM all_od_pairs_test
-GROUP BY status
+
+	SELECT status,
+	   100.0 * COUNT(*)        
+	   / SUM(COUNT(*)) OVER () 
+	   As "Percentage"
+	FROM all_od_pairs_test
+	GROUP BY status
