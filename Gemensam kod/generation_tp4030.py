@@ -271,7 +271,9 @@ def insert_results():
 
 
     print("Starting to insert results!")
-    cur_remote.execute("INSERT into remote_results_test select * from "+string_conc +" ON CONFLICT DO NOTHING")
+    cur_remote.execute("BEGIN TRANSACTION; "
+                       "INSERT into remote_results_test select * from "+string_conc +" ON CONFLICT DO NOTHING "
+                                                                                     " COMMIT ;")
     conn_remote.commit()
     print("All results inserted!")
 
