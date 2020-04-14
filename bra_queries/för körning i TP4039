@@ -1,6 +1,7 @@
 drop table all_od_pairs_test
 select * into all_od_pairs_test from all_od_pairs limit 50000;
 ALTER TABLE all_od_pairs_test ADD PRIMARY KEY (origin,destination);
+CREATE INDEX idx_od ON all_od_pairs_test (origin,destination);
 
 select * from all_od_pairs_test limit 10
 
