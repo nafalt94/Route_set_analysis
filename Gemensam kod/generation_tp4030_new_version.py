@@ -311,7 +311,7 @@ def update_result(assignment, status):
     cur_remote.execute("create temporary table temp_table as select unnest(ARRAY["+str(origin)+"]) as origin,"
                       " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
 
-    cur_remote.execute(" BEGIN TRANSACTION;"
+    cur_remote.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE; BEGIN TRANSACTION;"
                        " UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
                        " WHERE all_od_pairs_test.origin = temp_table.origin and "
                        " all_od_pairs_test.destination = temp_table.destination; "
@@ -324,19 +324,19 @@ def update_result(assignment, status):
 
 # Connection global to be used everywhere.
 #TP4030
-conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -372,7 +372,7 @@ def main():
             print("Klar med "+str(limit)+"st kl: " + dt_string)
 
         except Exception as exptest:
-            cur_remote.execute("DROP TABLE if exists temp_table")
+            cur_remote.execute("DROP TABLE if exists temp_table"+str(mac)+"")
             conn_remote.commit()
             print("Exception i While loop "+ str(exptest))
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
