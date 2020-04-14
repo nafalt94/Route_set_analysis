@@ -94,8 +94,10 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
     cur.execute("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
-     link_cost AS cost, 1000000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
+     link_cost AS cost FROM cost_table'," + str(start) + "," + str(end) + ") \
      INNER JOIN cost_table ON(edge = lid)")
+
+
 
     # Getting total cost for route 1 and setting first stop criterion.
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
@@ -104,17 +106,12 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     # print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
-    cur.execute("SELECT max(agg_cost) FROM temp_table1")
-    reverse = cur.fetchone()[0]
 
-    if route_stop is None or reverse > 1000000:
     # Result table creating
-        if route_stop is None:
-            # print("No route BEFORE WHILE LOOP")
-            cur.execute("DROP TABLE if exists result_table")
-        else:
-            # print("reverse activated to high!")
-            cur.execute("DROP TABLE if exists result_table")
+    if route_stop is None:
+        # print("No route BEFORE WHILE LOOP")
+        cur.execute("DROP TABLE if exists result_table")
+
     else:
         cur.execute("DROP TABLE if exists result_table")
         cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
@@ -124,7 +121,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         # # Pen cost as breaking if stuck instead of nr_routes
         # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
         # pen_q.next()
-        # # print("Pencost for rutt: "+str(pen_q.value(0)))
+        # # print("Pencost för rutt: "+str(pen_q.value(0)))
         # pen_stop = pen_q.value(0)
 
         # Calculationg alternative routes
@@ -145,7 +142,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                     print("No route between zone "+str(start_zone)+" and zone "+str(end_zone))
                 if route_stop is not None:
                     if route_stop >= 1000000:
-                        print("Warning reverse cost used in the while loop")
+                        print("Warning unusually high cost used in the while loop")
                 break
 
             # Calculating penalizing term (P. 14 in thesis work)
@@ -161,8 +158,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
 
             # Normal penalty
             cur.execute("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
-            CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
-            FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000000 AS reverse_cost \
+            CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost \
+            FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost \
             FROM cost_table) AS subq LEFT JOIN \
                 (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * " + str(route_stop) + "))*LN(" + str(delta) + ") AS cost \
             from result_table group by lid ) AS pen ON \
@@ -173,7 +170,10 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
             route_stop = cur.fetchone()[0]
 
-            #print("Current cost route " + str(i) + ": " + str(route_stop))
+            # print("Current cost route " + str(i) + ": " + str(route_stop))
+
+            # if route_stop < route1_cost:
+            #     break
 
 
             if comp(route_stop, route1_cost, threshold):
@@ -191,9 +191,10 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
                     i = i + 1
                     nr_routes = nr_routes + 1
-                    # print("HaR aR VI")
+                    # print("HÄR ÄR VI")
                     overlap_count = 0
                 else:
+                    # print("OVERLAP STOP")
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
@@ -215,11 +216,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         # No problems
         return 1
     # No route available
-    if reverse is None:
-        return 2
-    # Only reverse cost available
-    else:
-        return 3
+
+    return 3
+
 
 def fetch_update(limit):
     mac = get_mac()
@@ -350,7 +349,7 @@ def main():
     #cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
 
     i = 0
-    while i<1:
+    while i < 1:
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         print("Start: " + dt_string)

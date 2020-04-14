@@ -104,7 +104,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
     cur.execute("SELECT * INTO temp_table1 from pgr_dijkstra('SELECT lid AS id, start_node AS source, end_node AS target, \
-     link_cost AS cost, 1000000 AS reverse_cost FROM cost_table'," + str(start) + "," + str(end) + ") \
+     link_cost AS cost FROM cost_table'," + str(start) + "," + str(end) + ") \
      INNER JOIN cost_table ON(edge = lid)")
 
 
@@ -117,18 +117,11 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     route_stop = route1_cost
 
 
-
-    cur.execute("SELECT max(agg_cost) FROM temp_table1")
-    reverse = cur.fetchone()[0]
-
-    if route_stop is None or reverse > 1000000:
     # Result table creating
-        if route_stop is None:
-            # print("No route BEFORE WHILE LOOP")
-            cur.execute("DROP TABLE if exists result_table")
-        else:
-            # print("reverse activated to high!")
-            cur.execute("DROP TABLE if exists result_table")
+    if route_stop is None:
+        # print("No route BEFORE WHILE LOOP")
+        cur.execute("DROP TABLE if exists result_table")
+
     else:
         cur.execute("DROP TABLE if exists result_table")
         cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
@@ -159,7 +152,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                     print("No route between zone "+str(start_zone)+" and zone "+str(end_zone))
                 if route_stop is not None:
                     if route_stop >= 1000000:
-                        print("Warning reverse cost used in the while loop")
+                        print("Warning unusually high cost used in the while loop")
                 break
 
             # Calculating penalizing term (P. 14 in thesis work)
@@ -175,8 +168,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
 
             # Normal penalty
             cur.execute("SELECT * INTO temp_table2 FROM pgr_dijkstra('SELECT id, source, target, \
-            CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost, reverse_cost \
-            FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost, 1000000 AS reverse_cost \
+            CASE WHEN pen.cost IS NULL THEN subq.cost ELSE pen.cost END AS cost \
+            FROM (SELECT lid AS id, start_node AS source, end_node AS target, link_cost AS cost \
             FROM cost_table) AS subq LEFT JOIN \
                 (select lid as edge, max(cost) + (max(cost)/(" + str(my) + " * " + str(route_stop) + "))*LN(" + str(delta) + ") AS cost \
             from result_table group by lid ) AS pen ON \
@@ -188,6 +181,9 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             route_stop = cur.fetchone()[0]
 
             print("Current cost route " + str(i) + ": " + str(route_stop))
+
+            # if route_stop < route1_cost:
+            #     break
 
 
             if comp(route_stop, route1_cost, threshold):
@@ -208,6 +204,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                     # print("HÄR ÄR VI")
                     overlap_count = 0
                 else:
+                    print("OVERLAP STOP")
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
@@ -1303,8 +1300,8 @@ def main():
     cur.execute("UPDATE all_od_pairs SET status = -1")
     cur.execute("UPDATE all_od_pairs SET time_updated  = null")
 
-    #routeSetGeneration(7088, 7401, my, threshold, max_overlap)
-    fetch_update(my, threshold, max_overlap,100)
+    print(str(routeSetGeneration(6980, 6781, my, threshold, max_overlap)))
+    # fetch_update(my, threshold, max_overlap,100)
 
     start_zone = 7815
     end_zone = 7798
