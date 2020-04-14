@@ -55,7 +55,7 @@ def printRoutes(nr_routes):
         i = i + 1
 
 # Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
-def allToAll():
+def fetchResults():
     #Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
 
@@ -144,7 +144,7 @@ def main():
 
     if db.isValid():
         # Variable definitions
-        allToAll()
+        fetchResults()
         toc();
 
 

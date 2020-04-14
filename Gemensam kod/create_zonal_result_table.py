@@ -138,7 +138,7 @@ cur_remote = conn_remote.cursor()
 
 def main():
     tic()
-    removed_lids = [83025,84145,83443]
+    removed_lids = [83025,84145,83443,82268,82267]
 
     # cur_remote.execute("select start_zone from remote_results group by start_zone limit 10")
     # all_zones = cur_remote.fetchall()
