@@ -335,6 +335,7 @@ def allowed_update():
         #print("get mac is ", get_mac())
         if (mymac == get_mac()):
             insert_results()
+            cur_remote.execute("UPDATE insert_status SET status = -1 WHERE max = '"+str(get_mac())+"'" )
             print("results inserted from mac:"+str(get_mac()))
             break;
         print("checking table")
@@ -363,7 +364,7 @@ cur_remote = conn_remote.cursor()
 
 def main():
     tic()
-    print("Mac: ",get_mac())
+    print("Mac: ",get_mac()ss)
     # Variable definitions
     my = 0.01
     threshold = 1.3
