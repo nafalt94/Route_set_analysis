@@ -8,8 +8,8 @@ select * from all_od_pairs_test limit 10
 drop table remote_results_test
 CREATE TABLE IF NOT EXISTS remote_results_test(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, 
                geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, 
-               speed numeric, fcn_class BIGINT, my DOUBLE PRECISION, time DOUBLE PRECISION, PRIMARY KEY (start_zone, end_zone,did, path_seq))
-			   
+               speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))
+			   	   
 select * from remote_results_test limit 10
 
 
