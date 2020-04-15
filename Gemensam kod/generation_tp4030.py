@@ -363,7 +363,7 @@ cur_remote = conn_remote.cursor()
 
 def main():
     tic()
-
+    print("Mac: ",get_mac())
     # Variable definitions
     my = 0.01
     threshold = 1.3
