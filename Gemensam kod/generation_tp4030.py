@@ -335,7 +335,8 @@ def allowed_update():
         #print("get mac is ", get_mac())
         if (mymac == get_mac()):
             insert_results()
-            cur_remote.execute("UPDATE insert_status SET status = -1 WHERE max = '"+str(get_mac())+"'" )
+            cur_remote.execute("UPDATE insert_status SET status = -1 WHERE mac ="+str(get_mac()))
+            conn_remote.commit()
             print("results inserted from mac:"+str(get_mac()))
             break;
         print("checking table")
@@ -364,14 +365,12 @@ cur_remote = conn_remote.cursor()
 
 def main():
     tic()
-    print("Mac: ",get_mac()ss)
+    print("Mac: ",get_mac())
     # Variable definitions
     my = 0.01
     threshold = 1.3
     max_overlap  = 0.8
     limit = 100
-    #cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
-    #cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
 
     cur.execute("DROP TABLE if exists all_results")
 
