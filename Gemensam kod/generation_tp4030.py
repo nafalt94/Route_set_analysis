@@ -231,7 +231,7 @@ def fetch_update(limit):
     if not assignment:
         cur_remote.execute("WITH cte AS (select * from all_od_pairs_test "
                     "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
-                    "UPDATE all_od_pairs_test a SET status = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+                    "UPDATE all_od_pairs_test a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
         conn_remote.commit()
         cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
