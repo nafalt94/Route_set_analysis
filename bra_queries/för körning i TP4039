@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS remote_results_test(did INT, start_zone INT, end_zone
                geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, 
                speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))
 			   	   
-select * from remote_results_test limit 10
-
+select count(*) from remote_results_test limit 10
 
 
 	SELECT status,
@@ -39,5 +38,7 @@ UPDATE insert_status SET status = 13 WHERE name = 'b3_pc';
 UPDATE insert_status SET status = -1 WHERE name = 'b3_lap';
 UPDATE insert_status SET status = 15 WHERE name = 'b4_pc';
 UPDATE insert_status SET status = 16 WHERE name = 'b4_lap';
-UPDATE insert_status SET status = 17 WHERE name = 'mattias';
-UPDATE insert_status SET status = 18 WHERE name = 'gustav';
+UPDATE insert_status SET status = -1 WHERE name = 'mattias';
+UPDATE insert_status SET status = -1 WHERE name = 'gustav';
+
+select * from insert_status
