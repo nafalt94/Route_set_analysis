@@ -327,33 +327,36 @@ def update_result(assignment, status):
     print("Update complete")
 
 def allowed_update():
-    print("Done with script checking if I can start inserting!")
-    update = False
-    i=0
+    print("Done with script checking if computer can start inserting!")
     while True:
+        cur_remote.execute("SELECT mac FROM insert_status WHERE status=(SELECT max(status) FROM insert_status)")
+        mymac = cur_remote.fetchone()[0]
+        #print("mymac is ", mymac)
+        #print("get mac is ", get_mac())
+        if (mymac == get_mac()):
+            insert_results()
+            print("results inserted from mac:"+str(get_mac()))
+            break;
         print("checking table")
         time.sleep(2)
-        if i>20:
-            break
-        i +=1
 
 # End of function definitions
 
 # Connection global to be used everywhere.
 #TP4030
-#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -368,31 +371,32 @@ def main():
     limit = 100
     #cur_remote.execute("UPDATE all_od_pairs_test SET status = -1")
     #cur_remote.execute("UPDATE all_od_pairs_test SET time_updated  = null")
+
+    cur.execute("DROP TABLE if exists all_results")
+
+    i = 0
+    while i < 1:
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        print("Start: " + dt_string)
+        try:
+            assignment=fetch_update(limit)
+
+            if not assignment:
+                break
+
+            status = generate_assignments(my, threshold, max_overlap,assignment)
+            update_result(assignment, status)
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print("Klar med "+str(limit)+"st kl: " + dt_string)
+
+        except Exception as exptest:
+            cur_remote.execute("DROP TABLE if exists temp_table")
+            conn_remote.commit()
+            print("Exception i While loop "+ str(exptest))
+
     allowed_update()
-    # i = 0
-    # while i < 1:
-    #     now = datetime.now()
-    #     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    #     print("Start: " + dt_string)
-    #     try:
-    #         cur.execute("DROP TABLE if exists all_results")
-    #         assignment=fetch_update(limit)
-    #
-    #         if not assignment:
-    #             break
-    #
-    #         status = generate_assignments(my, threshold, max_overlap,assignment)
-    #         update_result(assignment, status)
-    #         now = datetime.now()
-    #         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    #         insert_results()
-    #         print("Klar med "+str(limit)+"st kl: " + dt_string)
-    #
-    #     except Exception as exptest:
-    #         cur_remote.execute("DROP TABLE if exists temp_table")
-    #         conn_remote.commit()
-    #         print("Exception i While loop "+ str(exptest))
-    #     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
 
 
