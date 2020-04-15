@@ -7,6 +7,7 @@ import sys
 from datetime import datetime
 import psycopg2
 import numpy as np
+from io import StringIO
 
 #For att fa MAC-address
 from uuid import getnode as get_mac
@@ -83,7 +84,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     from model_graph)")
     cur.execute("CREATE TABLE IF NOT EXISTS all_results(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, \
                geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, \
-               speed numeric, fcn_class BIGINT, my DOUBLE PRECISION, time DOUBLE PRECISION)")
+               speed numeric, fcn_class BIGINT)")
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
@@ -115,7 +116,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
     else:
         cur.execute("DROP TABLE if exists result_table")
         cur.execute("SELECT 1 AS did, " + str(start_zone) + " AS start_zone, " + str(end_zone) + " AS end_zone, lid, node, \
-        geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class, "+str(my)+" as my, 0.0 as time INTO \
+        geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class INTO \
         result_table FROM temp_table1")
 
         # # Pen cost as breaking if stuck instead of nr_routes
@@ -188,7 +189,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                 if overlap <= max_overlap:
                     cur.execute("INSERT INTO result_table SELECT " + str(i) + " AS did, " + str(start_zone) + " AS start_zone, "
                             + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
-                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my FROM temp_table2")
+                            path_seq, agg_cost, speed, fcn_class FROM temp_table2")
                     i = i + 1
                     nr_routes = nr_routes + 1
                     # print("HÄR ÄR VI")
@@ -198,7 +199,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
-                                            path_seq, agg_cost, speed, fcn_class," + str(my) + " as my, 0.0 as time FROM temp_table2")
+                                            path_seq, agg_cost, speed, fcn_class FROM temp_table2")
 
                 cur.execute("DROP TABLE if exists temp_table1")
                 cur.execute("SELECT * INTO temp_table1 from temp_table2")
@@ -209,8 +210,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                     break
             else:
                 break
-        dummy = str(toc())
-        cur.execute("UPDATE result_table SET time = " + dummy )
         cur.execute("INSERT INTO all_results SELECT * FROM result_table where did > -1")
         conn.commit()
         # No problems
@@ -289,7 +288,7 @@ def insert_results_row_wise():
         else:
             all_results.append([r[i] for r in cur.fetchall()])
         cur.execute("SELECT * FROM all_results")
-        # print(str((all_results[i])))
+        print(str((all_results[i])))
         i += 1
 
     i = 0
@@ -334,7 +333,7 @@ def allowed_update():
         #print("mymac is ", mymac)
         #print("get mac is ", get_mac())
         if (mymac == get_mac()):
-            insert_results()
+            copy_into_special()
             cur_remote.execute("UPDATE insert_status SET status = -1 WHERE mac ="+str(get_mac()))
             conn_remote.commit()
             print("results inserted from mac:"+str(get_mac()))
@@ -342,23 +341,45 @@ def allowed_update():
         print("checking table")
         time.sleep(2)
 
+
+def copy_into_table(conn, table, rows):
+    
+    cur = conn.cursor()
+    sio = StringIO()
+    sio.write('\n'.join('%s %s %s %s %s %s %s %s %s %s %s %s %s %s' % x for x in rows))
+    sio.seek(0)
+    cur.copy_from(sio, table, sep =' ')
+    conn.commit()
+
+def copy_into_special():
+    cur.execute("SELECT * FROM all_results")
+
+    rows = []
+    i = 0
+    for x in cur.fetchall():
+
+        rows.append(x)
+
+    copy_into_table(conn_remote, "remote_results_test", rows)
+
+
 # End of function definitions
 
 # Connection global to be used everywhere.
 #TP4030
-conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -397,6 +418,7 @@ def main():
             print("Exception i While loop "+ str(exptest))
 
     allowed_update()
+
 
 
 
