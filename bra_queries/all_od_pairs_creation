@@ -15,12 +15,14 @@ CROSS JOIN (select * FROM od_lid) b WHERE a.id != b.id ORDER BY RANDOM() limit 1
  ALTER TABLE all_od_pairs ADD COLUMN id SERIAL PRIMARY KEY;
  
  ALTER TABLE all_od_pairs ADD COLUMN status BIGINT
+ 
+ ALTER TABLE all_od_pairs ADD COLUMN assigned_to BIGINT
 
 ALTER TABLE all_od_pairs ADD COLUMN time_updated timestamp with time zone
 
 UPDATE all_od_pairs SET status = -1
 
-select * from all_od_pairs
+select * from all_od_pairs limit 10
 
 
 ## För att se hur långt processen är gången:
