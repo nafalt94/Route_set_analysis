@@ -342,14 +342,22 @@ def allowed_update():
         time.sleep(2)
 
 
-def copy_into_table(conn, table, rows):
+def copy_into_table(table, rows):
 
-    cur = conn.cursor()
+    cur_remote.execute("CREATE TEMP TABLE IF NOT EXISTS copy_temp_table(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT,"
+                       " geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION,"
+                       "speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
+
     sio = StringIO()
     sio.write('\n'.join('%s %s %s %s %s %s %s %s %s %s %s %s %s %s' % x for x in rows))
     sio.seek(0)
-    cur.copy_from(sio, table, sep =' ')
-    conn.commit()
+    cur_remote.copy_from(sio, "copy_temp_table", sep =' ')
+    conn_remote.commit()
+
+    cur_remote.execute("BEGIN TRANSACTION; "
+                       "INSERT into "+table+" select * from copy_temp_table ON CONFLICT DO NOTHING; COMMIT ;")
+    conn_remote.commit()
+
 
 def copy_into_special():
     cur.execute("SELECT * FROM all_results")
@@ -360,7 +368,7 @@ def copy_into_special():
 
         rows.append(x)
 
-    copy_into_table(conn_remote, "remote_results_test", rows)
+    copy_into_table( "remote_results_test", rows)
 
 
 # End of function definitions
@@ -418,9 +426,6 @@ def main():
             print("Exception i While loop "+ str(exptest))
 
     allowed_update()
-
-
-
 
 
 if __name__ == "__main__" or __name__ == "__console__":
