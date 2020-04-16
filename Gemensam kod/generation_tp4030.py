@@ -442,7 +442,8 @@ def main():
         try:
             while True:
                 cur_remote.execute("SELECT mac FROM insert_status WHERE update_order=(SELECT max(update_order) FROM insert_status)")
-                if (cur_remote.fetchone()[0] == get_mac()):
+                dummy_mac = cur_remote.fetchone()[0]
+                if dummy_mac == get_mac():
                     assignment = fetch_update(limit)
                     cur_remote.execute("SELECT count(*) FROM insert_status WHERE update_order <> -1")
                     if cur_remote.fetchone[0] == 1:
