@@ -343,24 +343,24 @@ def allowed_update():
             copy_into_special()
             cur_remote.execute("SELECT count(*) FROM insert_status WHERE status <> -1")
             if cur_remote.fetchone[0] == 1:
-                cur_remote.execute("UPDATE insert_status SET status = 1 WHERE name = 'a1_pc';"
-                                   "UPDATE insert_status SET status = 2 WHERE name = 'a1_lap';"
-                                   "UPDATE insert_status SET status = 3 WHERE name = 'a2_pc';"
-                                   "UPDATE insert_status SET status = 4 WHERE name = 'a2_lap';"
-                                   "UPDATE insert_status SET status = 5 WHERE name = 'a3_pc';"
-                                   "UPDATE insert_status SET status = 6 WHERE name = 'a3_lap';"
-                                   "UPDATE insert_status SET status = 7 WHERE name = 'a4_pc';"
-                                   "UPDATE insert_status SET status = 8 WHERE name = 'a4_lap';"
-                                   "UPDATE insert_status SET status = 9 WHERE name = 'b1_pc';"
-                                   "UPDATE insert_status SET status = 10 WHERE name = 'b1_lap';"
-                                   "UPDATE insert_status SET status = 11 WHERE name = 'b2_pc';"
-                                   "UPDATE insert_status SET status = 12 WHERE name = 'b2_lap';"
-                                   "UPDATE insert_status SET status = 13 WHERE name = 'b3_pc';"
-                                   "UPDATE insert_status SET status = -1 WHERE name = 'b3_lap';"
-                                   "UPDATE insert_status SET status = 15 WHERE name = 'b4_pc';"
-                                   "UPDATE insert_status SET status = 16 WHERE name = 'b4_lap';"
-                                   "UPDATE insert_status SET status = -1 WHERE name = 'mattias';"
-                                   "UPDATE insert_status SET status = -1 WHERE name = 'gustav';")
+                cur_remote.execute(" UPDATE insert_status SET status = 1 WHERE name = 'a1_pc';"
+                                   " UPDATE insert_status SET status = 2 WHERE name = 'a1_lap';"
+                                   " UPDATE insert_status SET status = 3 WHERE name = 'a2_pc';"
+                                   " UPDATE insert_status SET status = 4 WHERE name = 'a2_lap';"
+                                   " UPDATE insert_status SET status = 5 WHERE name = 'a3_pc';"
+                                   " UPDATE insert_status SET status = 6 WHERE name = 'a3_lap';"
+                                   " UPDATE insert_status SET status = 7 WHERE name = 'a4_pc';"
+                                   " UPDATE insert_status SET status = 8 WHERE name = 'a4_lap';"
+                                   " UPDATE insert_status SET status = 9 WHERE name = 'b1_pc';"
+                                   " UPDATE insert_status SET status = 10 WHERE name = 'b1_lap';"
+                                   " UPDATE insert_status SET status = 11 WHERE name = 'b2_pc';"
+                                   " UPDATE insert_status SET status = 12 WHERE name = 'b2_lap';"
+                                   " UPDATE insert_status SET status = 13 WHERE name = 'b3_pc';"
+                                   " UPDATE insert_status SET status = -1 WHERE name = 'b3_lap';"
+                                   " UPDATE insert_status SET status = 15 WHERE name = 'b4_pc';"
+                                   " UPDATE insert_status SET status = 16 WHERE name = 'b4_lap';"
+                                   " UPDATE insert_status SET status = -1 WHERE name = 'mattias';"
+                                   " UPDATE insert_status SET status = -1 WHERE name = 'gustav';")
                 conn_remote.commit()
             else:
                 cur_remote.execute("UPDATE insert_status SET status = -1 WHERE mac =" + str(get_mac()))
@@ -452,24 +452,25 @@ def main():
                     cur_remote.execute("SELECT count(*) FROM insert_status WHERE update_order <> -1")
                     print("5")
                     if cur_remote.fetchone[0] == 1:
+                        print("1337")
                         cur_remote.execute("UPDATE insert_status SET update_order = 1 WHERE name = 'a1_pc';"
-                                           "UPDATE insert_status SET update_order = 2 WHERE name = 'a1_lap';"
-                                           "UPDATE insert_status SET update_order = 3 WHERE name = 'a2_pc';"
-                                           "UPDATE insert_status SET update_order = 4 WHERE name = 'a2_lap';"
-                                           "UPDATE insert_status SET update_order = 5 WHERE name = 'a3_pc';"
-                                           "UPDATE insert_status SET update_order = 6 WHERE name = 'a3_lap';"
-                                           "UPDATE insert_status SET update_order = 7 WHERE name = 'a4_pc';"
-                                           "UPDATE insert_status SET update_order = 8 WHERE name = 'a4_lap';"
-                                           "UPDATE insert_status SET update_order = 9 WHERE name = 'b1_pc';"
-                                           "UPDATE insert_status SET update_order = 10 WHERE name = 'b1_lap';"
-                                           "UPDATE insert_status SET update_order = 11 WHERE name = 'b2_pc';"
-                                           "UPDATE insert_status SET update_order = 12 WHERE name = 'b2_lap';"
-                                           "UPDATE insert_status SET update_order = 13 WHERE name = 'b3_pc';"
-                                           "UPDATE insert_status SET update_order = -1 WHERE name = 'b3_lap';"
-                                           "UPDATE insert_status SET update_order = 15 WHERE name = 'b4_pc';"
-                                           "UPDATE insert_status SET update_order = 16 WHERE name = 'b4_lap';"
-                                           "UPDATE insert_status SET update_order = -1 WHERE name = 'mattias';"
-                                           "UPDATE insert_status SET update_order = -1 WHERE name = 'gustav';")
+                                           " UPDATE insert_status SET update_order = 2 WHERE name = 'a1_lap';"
+                                           " UPDATE insert_status SET update_order = 3 WHERE name = 'a2_pc';"
+                                           " UPDATE insert_status SET update_order = 4 WHERE name = 'a2_lap';"
+                                           " UPDATE insert_status SET update_order = 5 WHERE name = 'a3_pc';"
+                                           " UPDATE insert_status SET update_order = 6 WHERE name = 'a3_lap';"
+                                           " UPDATE insert_status SET update_order = 7 WHERE name = 'a4_pc';"
+                                           " UPDATE insert_status SET update_order = 8 WHERE name = 'a4_lap';"
+                                           " UPDATE insert_status SET update_order = 9 WHERE name = 'b1_pc';"
+                                           " UPDATE insert_status SET update_order = 10 WHERE name = 'b1_lap';"
+                                           " UPDATE insert_status SET update_order = 11 WHERE name = 'b2_pc';"
+                                           " UPDATE insert_status SET update_order = 12 WHERE name = 'b2_lap';"
+                                           " UPDATE insert_status SET update_order = 13 WHERE name = 'b3_pc';"
+                                           " UPDATE insert_status SET update_order = -1 WHERE name = 'b3_lap';"
+                                           " UPDATE insert_status SET update_order = 15 WHERE name = 'b4_pc';"
+                                           " UPDATE insert_status SET update_order = 16 WHERE name = 'b4_lap';"
+                                           " UPDATE insert_status SET update_order = -1 WHERE name = 'mattias';"
+                                           " UPDATE insert_status SET update_order = -1 WHERE name = 'gustav';")
                         conn_remote.commit()
                         print("6")
                     else:
