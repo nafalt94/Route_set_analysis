@@ -241,7 +241,14 @@ def generate_assignments(my, threshold, max_overlap,assignment):
     print("Starting route set generation")
     status = []
     i = 0
+    print_count = 1
     while i < len(assignment):
+        if i == print_count*len(assignment)/5:
+            print_count += 1
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print("Finished with " + str(i/len(assignment)) + "kl: " + dt_string)
+
         status.append(routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap))
         i += 1
 
