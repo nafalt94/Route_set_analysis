@@ -8,10 +8,9 @@ select * from all_od_pairs_test limit 10
 drop table remote_results_test
 CREATE TABLE IF NOT EXISTS remote_results_test(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, 
                geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, 
-               speed numeric, fcn_class BIGINT, my DOUBLE PRECISION, time DOUBLE PRECISION, PRIMARY KEY (start_zone, end_zone,did, path_seq))
-			   
-select * from remote_results_test limit 10
-
+               speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))
+			   	   
+select count(*) from remote_results_test limit 10
 
 
 	SELECT status,
@@ -20,3 +19,26 @@ select * from remote_results_test limit 10
 	   As "Percentage"
 	FROM all_od_pairs_test
 	GROUP BY status
+
+
+/För att nollställa insert_table
+UPDATE insert_status SET status = 1 WHERE name = 'a1_pc';
+UPDATE insert_status SET status = 2 WHERE name = 'a1_lap';
+UPDATE insert_status SET status = 3 WHERE name = 'a2_pc';
+UPDATE insert_status SET status = 4 WHERE name = 'a2_lap';
+UPDATE insert_status SET status = 5 WHERE name = 'a3_pc';
+UPDATE insert_status SET status = 6 WHERE name = 'a3_lap';
+UPDATE insert_status SET status = 7 WHERE name = 'a4_pc';
+UPDATE insert_status SET status = 8 WHERE name = 'a4_lap';
+UPDATE insert_status SET status = 9 WHERE name = 'b1_pc';
+UPDATE insert_status SET status = 10 WHERE name = 'b1_lap';
+UPDATE insert_status SET status = 11 WHERE name = 'b2_pc';
+UPDATE insert_status SET status = 12 WHERE name = 'b2_lap';
+UPDATE insert_status SET status = 13 WHERE name = 'b3_pc';
+UPDATE insert_status SET status = -1 WHERE name = 'b3_lap';
+UPDATE insert_status SET status = 15 WHERE name = 'b4_pc';
+UPDATE insert_status SET status = 16 WHERE name = 'b4_lap';
+UPDATE insert_status SET status = -1 WHERE name = 'mattias';
+UPDATE insert_status SET status = -1 WHERE name = 'gustav';
+
+select * from insert_status
