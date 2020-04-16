@@ -441,11 +441,16 @@ def main():
         print("Start: " + dt_string)
         try:
             while True:
+                print("1")
                 cur_remote.execute("SELECT mac FROM insert_status WHERE update_order=(SELECT max(update_order) FROM insert_status)")
                 dummy_mac = cur_remote.fetchone()[0]
+                print("2")
                 if dummy_mac == get_mac():
+                    print("3")
                     assignment = fetch_update(limit)
+                    print("4")
                     cur_remote.execute("SELECT count(*) FROM insert_status WHERE update_order <> -1")
+                    print("5")
                     if cur_remote.fetchone[0] == 1:
                         cur_remote.execute("UPDATE insert_status SET update_order = 1 WHERE name = 'a1_pc';"
                                            "UPDATE insert_status SET update_order = 2 WHERE name = 'a1_lap';"
@@ -466,9 +471,11 @@ def main():
                                            "UPDATE insert_status SET update_order = -1 WHERE name = 'mattias';"
                                            "UPDATE insert_status SET update_order = -1 WHERE name = 'gustav';")
                         conn_remote.commit()
+                        print("6")
                     else:
                         cur_remote.execute("UPDATE insert_status SET update_order = -1 WHERE mac =" + str(get_mac()))
                         conn_remote.commit()
+                        print("7")
 
                     print("Update from mac:" + str(get_mac()))
                     break;
