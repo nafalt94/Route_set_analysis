@@ -344,21 +344,21 @@ def allowed_update():
 
 def copy_into_table(table, rows):
 
-    cur_remote.execute("CREATE TEMP TABLE IF NOT EXISTS copy_temp_table(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT,"
-                       " geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION,"
-                       "speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
+    # cur_remote.execute("CREATE TEMP TABLE IF NOT EXISTS copy_temp_table(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT,"
+    #                    " geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION,"
+    #                    "speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
 
     sio = StringIO()
     print("1 fast")
     sio.write('\n'.join('%s %s %s %s %s %s %s %s %s %s %s %s %s %s' % x for x in rows))
     sio.seek(0)
     print("2 fast")
-    cur_remote.copy_from(sio, "copy_temp_table", sep =' ')
+    cur_remote.copy_from(sio, table, sep =' ')
     conn_remote.commit()
-    print("3 fast")
-    cur_remote.execute("BEGIN TRANSACTION; "
-                       "INSERT into "+table+" select * from copy_temp_table ON CONFLICT DO NOTHING; COMMIT ;")
-    conn_remote.commit()
+    # print("3 fast")
+    # cur_remote.execute("BEGIN TRANSACTION; "
+    #                    "INSERT into "+table+" select * from copy_temp_table ON CONFLICT DO NOTHING; COMMIT ;")
+    # conn_remote.commit()
 
 
 def copy_into_special():
@@ -401,7 +401,7 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap  = 0.8
-    limit = 100
+    limit = 93333
 
     cur.execute("DROP TABLE if exists all_results")
 
