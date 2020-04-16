@@ -378,7 +378,6 @@ def main():
             print("Klar med "+str(limit)+"st kl: " + dt_string)
 
         except Exception as exptest:
-            cur_remote.execute("DROP TABLE if exists temp_table")
             conn_remote.commit()
             print("Exception i While loop "+ str(exptest))
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
