@@ -42,3 +42,12 @@ UPDATE insert_status SET status = -1 WHERE name = 'mattias';
 UPDATE insert_status SET status = -1 WHERE name = 'gustav';
 
 select * from insert_status
+
+#För att ladda in i remote results
+select * into remote_results from remote_results_test
+CREATE INDEX lid_idx ON remote_results (lid);
+CREATE INDEX start_end_idx ON remote_results (start_zone, end_zone);
+CREATE INDEX geom_idx ON remote_results (geom);
+CREATE INDEX did_idx ON remote_results (did);
+CREATE INDEX start_idx ON remote_results (start_zone);
+CREATE INDEX end_idx ON remote_results (end_zone);
