@@ -349,11 +349,13 @@ def copy_into_table(table, rows):
                        "speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
 
     sio = StringIO()
+    print("1 fast")
     sio.write('\n'.join('%s %s %s %s %s %s %s %s %s %s %s %s %s %s' % x for x in rows))
     sio.seek(0)
+    print("2 fast")
     cur_remote.copy_from(sio, "copy_temp_table", sep =' ')
     conn_remote.commit()
-
+    print("3 fast")
     cur_remote.execute("BEGIN TRANSACTION; "
                        "INSERT into "+table+" select * from copy_temp_table ON CONFLICT DO NOTHING; COMMIT ;")
     conn_remote.commit()
