@@ -234,7 +234,8 @@ def fetch_update(limit):
         conn_remote.commit()
         cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
-
+    cur_remote.execute("UPDATE insert_status SET fetch_time = null WHERE mac = " + str(get_mac()))
+    conn_remote.commit()
     return assignment
 
 def generate_assignments(my, threshold, max_overlap,assignment):
@@ -382,6 +383,9 @@ def copy_into_table(table, rows):
     sio.seek(0)
     cur_remote.copy_from(sio, table, sep =' ')
     conn_remote.commit()
+    print("Results inserted!")
+    cur_remote.execute("UPDATE insert_status SET insert_time = null WHERE mac = " + str(get_mac()))
+    conn_remote.commit()
     # print("3 fast")
     # cur_remote.execute("BEGIN TRANSACTION; "
     #                    "INSERT into "+table+" select * from copy_temp_table ON CONFLICT DO NOTHING; COMMIT ;")
@@ -405,9 +409,11 @@ def order(type):
     conn_remote.commit()
 
     while True:
-        cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT max(" + str(type) + ") FROM insert_status)")
-        #if (cur_remote.fecthone()[0] == get_mac()):
-        break
+        cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT min(" + str(type) + ") FROM insert_status)")
+        if (cur_remote.fetchone()[0] == get_mac()):
+            return True;
+
+
 
 # End of function definitions
 
@@ -437,71 +443,33 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap = 0.8
-    limit = 500
-    order('update_time')
-    # cur.execute("DROP TABLE if exists all_results")
-    #
-    # i = 0
-    # while i < 1:
-    #     now = datetime.now()
-    #     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    #     print("Start: " + dt_string)
-    #     try:
-    #         while True:
-    #
-    #             cur_remote.execute("SELECT mac FROM insert_status WHERE update_order=(SELECT max(update_order) FROM insert_status)")
-    #
-    #             if cur_remote.fetchone()[0] == get_mac():
-    #
-    #                 assignment = fetch_update(limit)
-    #
-    #                 cur_remote.execute("SELECT count(*) FROM insert_status WHERE update_order <> -1")
-    #
-    #
-    #                 if cur_remote.fetchone()[0] == 1:
-    #                     cur_remote.execute("UPDATE insert_status SET update_order = 1 WHERE name = 'a1_pc';"
-    #                                        " UPDATE insert_status SET update_order = 2 WHERE name = 'a1_lap';"
-    #                                        " UPDATE insert_status SET update_order = 3 WHERE name = 'a2_pc';"
-    #                                        " UPDATE insert_status SET update_order = 4 WHERE name = 'a2_lap';"
-    #                                        " UPDATE insert_status SET update_order = 5 WHERE name = 'a3_pc';"
-    #                                        " UPDATE insert_status SET update_order = 6 WHERE name = 'a3_lap';"
-    #                                        " UPDATE insert_status SET update_order = 7 WHERE name = 'a4_pc';"
-    #                                        " UPDATE insert_status SET update_order = 8 WHERE name = 'a4_lap';"
-    #                                        " UPDATE insert_status SET update_order = 9 WHERE name = 'b1_pc';"
-    #                                        " UPDATE insert_status SET update_order = 10 WHERE name = 'b1_lap';"
-    #                                        " UPDATE insert_status SET update_order = 11 WHERE name = 'b2_pc';"
-    #                                        " UPDATE insert_status SET update_order = 12 WHERE name = 'b2_lap';"
-    #                                        " UPDATE insert_status SET update_order = 13 WHERE name = 'b3_pc';"
-    #                                        " UPDATE insert_status SET update_order = -1 WHERE name = 'b3_lap';"
-    #                                        " UPDATE insert_status SET update_order = 15 WHERE name = 'b4_pc';"
-    #                                        " UPDATE insert_status SET update_order = 16 WHERE name = 'b4_lap';"
-    #                                        " UPDATE insert_status SET update_order = -1 WHERE name = 'mattias';"
-    #                                        " UPDATE insert_status SET update_order = -1 WHERE name = 'gustav';")
-    #                     conn_remote.commit()
-    #
-    #                 else:
-    #                     cur_remote.execute("UPDATE insert_status SET update_order = -1 WHERE mac =" + str(get_mac()))
-    #                     conn_remote.commit()
-    #
-    #
-    #                 print("Update from mac:" + str(get_mac()))
-    #                 break;
-    #             print("checking update table")
-    #             time.sleep(2)
-    #
-    #
-    #         if not assignment:
-    #             break
-    #
-    #         status = generate_assignments(my, threshold, max_overlap,assignment)
-    #         update_result(assignment, status)
-    #         now = datetime.now()
-    #         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    #         print("uppdaterat "+str(limit)+"st kl: " + dt_string)
-    #         allowed_update()
-    #     except Exception as exptest:
-    #         conn_remote.commit()
-    #         print("Exception i While loop "+ str(exptest))
+    limit = 100
+
+    cur.execute("DROP TABLE if exists all_results")
+
+    i = 0
+    while i < 1:
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        print("Start: " + dt_string)
+        try:
+            order('fetch_time')
+            assignment = fetch_update(limit)
+
+            if not assignment:
+                break
+
+            status = generate_assignments(my, threshold, max_overlap,assignment)
+            update_result(assignment, status)
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print("uppdaterat "+str(limit)+"st kl: " + dt_string)
+            order('insert_time')
+            copy_into_special()
+            cur.execute("DROP TABLE if exists all_results")
+        except Exception as exptest:
+            conn_remote.commit()
+            print("Exception i While loop "+ str(exptest))
 
 
 
