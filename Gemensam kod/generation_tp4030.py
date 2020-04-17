@@ -427,8 +427,8 @@ def main():
     # Variable definitions
     my = 0.01
     threshold = 1.3
-    max_overlap  = 0.8
-    limit = 93333
+    max_overlap = 0.8
+    limit = 500
 
     cur.execute("DROP TABLE if exists all_results")
 
@@ -450,7 +450,6 @@ def main():
 
 
                     if cur_remote.fetchone()[0] == 1:
-                        print("1337")
                         cur_remote.execute("UPDATE insert_status SET update_order = 1 WHERE name = 'a1_pc';"
                                            " UPDATE insert_status SET update_order = 2 WHERE name = 'a1_lap';"
                                            " UPDATE insert_status SET update_order = 3 WHERE name = 'a2_pc';"
