@@ -419,19 +419,19 @@ def order(type):
 
 # Connection global to be used everywhere.
 #TP4030
-#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -443,7 +443,7 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap = 0.8
-    limit = 100
+    limit = 1
 
     cur.execute("DROP TABLE if exists all_results")
 
