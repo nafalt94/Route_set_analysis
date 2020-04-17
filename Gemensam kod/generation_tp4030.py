@@ -381,6 +381,10 @@ def copy_into_table(table, rows):
     sio = StringIO()
     sio.write('\n'.join('%s %s %s %s %s %s %s %s %s %s %s %s %s %s' % x for x in rows))
     sio.seek(0)
+
+    # Checking if allowed to copy results into remote results
+    order('insert_time')
+
     cur_remote.copy_from(sio, table, sep =' ')
     conn_remote.commit()
     print("Results inserted!")
@@ -399,9 +403,7 @@ def copy_into_special():
     i = 0
     for x in cur.fetchall():
         rows.append(x)
-
-    #Checking if allowed to copy results into remote results
-    order('insert_time')
+        
     copy_into_table( "remote_results_test", rows)
 
 def order(type):
