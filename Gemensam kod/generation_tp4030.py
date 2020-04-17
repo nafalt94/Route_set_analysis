@@ -488,13 +488,13 @@ def main():
             update_result(assignment, status)
             now = datetime.now()
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            print("Klar med "+str(limit)+"st kl: " + dt_string)
-
+            print("uppdaterat "+str(limit)+"st kl: " + dt_string)
+            allowed_update()
         except Exception as exptest:
             conn_remote.commit()
             print("Exception i While loop "+ str(exptest))
 
-    allowed_update()
+
 
 
 if __name__ == "__main__" or __name__ == "__console__":
