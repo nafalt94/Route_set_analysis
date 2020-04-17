@@ -399,6 +399,10 @@ def copy_into_special():
 
     copy_into_table( "remote_results_test", rows)
 
+def order(type):
+    print("Checking table "+str(type))
+
+    cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT max(" + str(type) + ") FROM insert_status)")
 
 # End of function definitions
 
