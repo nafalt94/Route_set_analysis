@@ -401,26 +401,31 @@ def copy_into_special():
 
 def order(type):
     print("Checking table "+str(type))
+    cur_remote.execute("UPDATE insert_status SET " + str(type) + " = now() WHERE mac = " + str(get_mac()))
+    conn_remote.commit()
 
-    cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT max(" + str(type) + ") FROM insert_status)")
+    while True:
+        cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT max(" + str(type) + ") FROM insert_status)")
+        #if (cur_remote.fecthone()[0] == get_mac()):
+        break
 
 # End of function definitions
 
 # Connection global to be used everywhere.
 #TP4030
-conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -433,70 +438,70 @@ def main():
     threshold = 1.3
     max_overlap = 0.8
     limit = 500
-
-    cur.execute("DROP TABLE if exists all_results")
-
-    i = 0
-    while i < 1:
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        print("Start: " + dt_string)
-        try:
-            while True:
-
-                cur_remote.execute("SELECT mac FROM insert_status WHERE update_order=(SELECT max(update_order) FROM insert_status)")
-
-                if cur_remote.fetchone()[0] == get_mac():
-
-                    assignment = fetch_update(limit)
-
-                    cur_remote.execute("SELECT count(*) FROM insert_status WHERE update_order <> -1")
-
-
-                    if cur_remote.fetchone()[0] == 1:
-                        cur_remote.execute("UPDATE insert_status SET update_order = 1 WHERE name = 'a1_pc';"
-                                           " UPDATE insert_status SET update_order = 2 WHERE name = 'a1_lap';"
-                                           " UPDATE insert_status SET update_order = 3 WHERE name = 'a2_pc';"
-                                           " UPDATE insert_status SET update_order = 4 WHERE name = 'a2_lap';"
-                                           " UPDATE insert_status SET update_order = 5 WHERE name = 'a3_pc';"
-                                           " UPDATE insert_status SET update_order = 6 WHERE name = 'a3_lap';"
-                                           " UPDATE insert_status SET update_order = 7 WHERE name = 'a4_pc';"
-                                           " UPDATE insert_status SET update_order = 8 WHERE name = 'a4_lap';"
-                                           " UPDATE insert_status SET update_order = 9 WHERE name = 'b1_pc';"
-                                           " UPDATE insert_status SET update_order = 10 WHERE name = 'b1_lap';"
-                                           " UPDATE insert_status SET update_order = 11 WHERE name = 'b2_pc';"
-                                           " UPDATE insert_status SET update_order = 12 WHERE name = 'b2_lap';"
-                                           " UPDATE insert_status SET update_order = 13 WHERE name = 'b3_pc';"
-                                           " UPDATE insert_status SET update_order = -1 WHERE name = 'b3_lap';"
-                                           " UPDATE insert_status SET update_order = 15 WHERE name = 'b4_pc';"
-                                           " UPDATE insert_status SET update_order = 16 WHERE name = 'b4_lap';"
-                                           " UPDATE insert_status SET update_order = -1 WHERE name = 'mattias';"
-                                           " UPDATE insert_status SET update_order = -1 WHERE name = 'gustav';")
-                        conn_remote.commit()
-
-                    else:
-                        cur_remote.execute("UPDATE insert_status SET update_order = -1 WHERE mac =" + str(get_mac()))
-                        conn_remote.commit()
-
-
-                    print("Update from mac:" + str(get_mac()))
-                    break;
-                print("checking update table")
-                time.sleep(2)
-
-
-            if not assignment:
-                break
-
-            status = generate_assignments(my, threshold, max_overlap,assignment)
-            update_result(assignment, status)
-            now = datetime.now()
-            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            print("uppdaterat "+str(limit)+"st kl: " + dt_string)
-            allowed_update()
-        except Exception as exptest:
-            conn_remote.commit()
-            print("Exception i While loop "+ str(exptest))
+    order('update_time')
+    # cur.execute("DROP TABLE if exists all_results")
+    #
+    # i = 0
+    # while i < 1:
+    #     now = datetime.now()
+    #     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    #     print("Start: " + dt_string)
+    #     try:
+    #         while True:
+    #
+    #             cur_remote.execute("SELECT mac FROM insert_status WHERE update_order=(SELECT max(update_order) FROM insert_status)")
+    #
+    #             if cur_remote.fetchone()[0] == get_mac():
+    #
+    #                 assignment = fetch_update(limit)
+    #
+    #                 cur_remote.execute("SELECT count(*) FROM insert_status WHERE update_order <> -1")
+    #
+    #
+    #                 if cur_remote.fetchone()[0] == 1:
+    #                     cur_remote.execute("UPDATE insert_status SET update_order = 1 WHERE name = 'a1_pc';"
+    #                                        " UPDATE insert_status SET update_order = 2 WHERE name = 'a1_lap';"
+    #                                        " UPDATE insert_status SET update_order = 3 WHERE name = 'a2_pc';"
+    #                                        " UPDATE insert_status SET update_order = 4 WHERE name = 'a2_lap';"
+    #                                        " UPDATE insert_status SET update_order = 5 WHERE name = 'a3_pc';"
+    #                                        " UPDATE insert_status SET update_order = 6 WHERE name = 'a3_lap';"
+    #                                        " UPDATE insert_status SET update_order = 7 WHERE name = 'a4_pc';"
+    #                                        " UPDATE insert_status SET update_order = 8 WHERE name = 'a4_lap';"
+    #                                        " UPDATE insert_status SET update_order = 9 WHERE name = 'b1_pc';"
+    #                                        " UPDATE insert_status SET update_order = 10 WHERE name = 'b1_lap';"
+    #                                        " UPDATE insert_status SET update_order = 11 WHERE name = 'b2_pc';"
+    #                                        " UPDATE insert_status SET update_order = 12 WHERE name = 'b2_lap';"
+    #                                        " UPDATE insert_status SET update_order = 13 WHERE name = 'b3_pc';"
+    #                                        " UPDATE insert_status SET update_order = -1 WHERE name = 'b3_lap';"
+    #                                        " UPDATE insert_status SET update_order = 15 WHERE name = 'b4_pc';"
+    #                                        " UPDATE insert_status SET update_order = 16 WHERE name = 'b4_lap';"
+    #                                        " UPDATE insert_status SET update_order = -1 WHERE name = 'mattias';"
+    #                                        " UPDATE insert_status SET update_order = -1 WHERE name = 'gustav';")
+    #                     conn_remote.commit()
+    #
+    #                 else:
+    #                     cur_remote.execute("UPDATE insert_status SET update_order = -1 WHERE mac =" + str(get_mac()))
+    #                     conn_remote.commit()
+    #
+    #
+    #                 print("Update from mac:" + str(get_mac()))
+    #                 break;
+    #             print("checking update table")
+    #             time.sleep(2)
+    #
+    #
+    #         if not assignment:
+    #             break
+    #
+    #         status = generate_assignments(my, threshold, max_overlap,assignment)
+    #         update_result(assignment, status)
+    #         now = datetime.now()
+    #         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    #         print("uppdaterat "+str(limit)+"st kl: " + dt_string)
+    #         allowed_update()
+    #     except Exception as exptest:
+    #         conn_remote.commit()
+    #         print("Exception i While loop "+ str(exptest))
 
 
 
