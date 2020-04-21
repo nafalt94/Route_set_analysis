@@ -223,18 +223,18 @@ def fetch_update(limit):
     mac = get_mac()
 
     #Check if any assignments needs to be finished
-    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
+    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test_new WHERE status = "+str(mac))
     assignment = cur_remote.fetchall()
     #print("assignment: "+str(assignment))
 
     if not assignment:
-        cur_remote.execute("WITH cte AS (select * from all_od_pairs_test "
+        cur_remote.execute("WITH cte AS (select * from all_od_pairs_test_new "
                     "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
-                    "UPDATE all_od_pairs_test a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+                    "UPDATE all_od_pairs_test_new a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
         conn_remote.commit()
-        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
+        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test_new WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
-    cur_remote.execute("UPDATE insert_status SET fetch_time = null WHERE mac = " + str(get_mac()))
+    cur_remote.execute("UPDATE insert_status_new SET fetch_time = null WHERE mac = " + str(get_mac()))
     conn_remote.commit()
     return assignment
 
@@ -255,64 +255,6 @@ def generate_assignments(my, threshold, max_overlap,assignment):
 
     print("Route set generation complete")
     return status
-def insert_results():
-    cur.execute("SELECT * FROM all_results")
-
-    all_results = []
-    i = 0
-    while i < 14:
-        if i == 12:
-            all_results.append([float(r[i]) for r in cur.fetchall()])
-        else:
-            all_results.append([r[i] for r in cur.fetchall()])
-        cur.execute("SELECT * FROM all_results")
-        #print(str((all_results[i])))
-        i +=1
-
-    string_conc = "unnest(ARRAY["+str(all_results[0] )+"]"
-    i = 1
-    while i < 14:
-        string_conc += ", (ARRAY["+str(all_results[i] )+"])"
-        i += 1
-    string_conc += ")"
-
-
-    print("Starting to insert results!")
-    cur_remote.execute("BEGIN TRANSACTION; "
-                       "INSERT into remote_results_test select * from "+string_conc +" ON CONFLICT DO NOTHING; "
-                                                                                     " COMMIT ;")
-    conn_remote.commit()
-    print("All results inserted!")
-
-def insert_results_row_wise():
-    cur.execute("SELECT * FROM all_results")
-    print("Starting to insert results!")
-
-    all_results = []
-    i = 0
-    while i < 14:
-        if i == 12:
-            all_results.append([float(r[i]) for r in cur.fetchall()])
-        else:
-            all_results.append([r[i] for r in cur.fetchall()])
-        cur.execute("SELECT * FROM all_results")
-        print(str((all_results[i])))
-        i += 1
-
-    i = 0
-    while i < len(all_results[1]):
-        cur.execute("BEGIN TRANSACTION; "
-                           "INSERT into remote_results_test (did, start_zone, end_zone,lid,node,geom, cost,link_cost,start_node,"
-                    "end_node, path_seq,agg_cost,speed,fcn_class) values (" + str(all_results[0][i]) + ", "+str(all_results[1][i])+" "
-                                ", " +str(all_results[2][i])+ ", " +str(all_results[3][i])+  ", " +str(all_results[4][i])+ ", '" +str(all_results[5][i])+
-                    "', " +str(all_results[6][i])+ ", " +str(all_results[7][i])+ ", " +str(all_results[8][i])+ ", " +str(all_results[9][i])+
-                    ", " +str(all_results[10][i])+ ", " +str(all_results[11][i])+ ", " +str(all_results[12][i])+ ", " +str(all_results[13][i])+ ") "
-                                    " ON CONFLICT DO NOTHING;   COMMIT ;")
-        i +=1
-        conn.commit()
-
-    print("All results inserted!")
-
 
 def update_result(assignment, status):
 
@@ -325,52 +267,13 @@ def update_result(assignment, status):
                       " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
 
     cur_remote.execute(" BEGIN TRANSACTION;"
-                       " UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
-                       " WHERE all_od_pairs_test.origin = temp_table.origin and "
-                       " all_od_pairs_test.destination = temp_table.destination; "
+                       " UPDATE all_od_pairs_test_new SET status = temp_table.status, time_updated = NOW() FROM temp_table "
+                       " WHERE all_od_pairs_test_new.origin = temp_table.origin and "
+                       " all_od_pairs_test_new.destination = temp_table.destination; "
                        "COMMIT ;")
     cur_remote.execute("DROP TABLE temp_table")
     conn_remote.commit()
     print("Update complete")
-
-def allowed_update():
-    print("Done with script checking if computer can start inserting!")
-    while True:
-        cur_remote.execute("SELECT mac FROM insert_status WHERE status=(SELECT max(status) FROM insert_status)")
-        mymac = cur_remote.fetchone()[0]
-        #print("mymac is ", mymac)
-        #print("get mac is ", get_mac())
-        if (mymac == get_mac()):
-            copy_into_special()
-            cur_remote.execute("SELECT count(*) FROM insert_status WHERE status <> -1")
-            if cur_remote.fetchone()[0] == 1:
-                cur_remote.execute(" UPDATE insert_status SET status = 1 WHERE name = 'a1_pc';"
-                                   " UPDATE insert_status SET status = 2 WHERE name = 'a1_lap';"
-                                   " UPDATE insert_status SET status = 3 WHERE name = 'a2_pc';"
-                                   " UPDATE insert_status SET status = 4 WHERE name = 'a2_lap';"
-                                   " UPDATE insert_status SET status = 5 WHERE name = 'a3_pc';"
-                                   " UPDATE insert_status SET status = 6 WHERE name = 'a3_lap';"
-                                   " UPDATE insert_status SET status = 7 WHERE name = 'a4_pc';"
-                                   " UPDATE insert_status SET status = 8 WHERE name = 'a4_lap';"
-                                   " UPDATE insert_status SET status = 9 WHERE name = 'b1_pc';"
-                                   " UPDATE insert_status SET status = 10 WHERE name = 'b1_lap';"
-                                   " UPDATE insert_status SET status = 11 WHERE name = 'b2_pc';"
-                                   " UPDATE insert_status SET status = 12 WHERE name = 'b2_lap';"
-                                   " UPDATE insert_status SET status = 13 WHERE name = 'b3_pc';"
-                                   " UPDATE insert_status SET status = -1 WHERE name = 'b3_lap';"
-                                   " UPDATE insert_status SET status = 15 WHERE name = 'b4_pc';"
-                                   " UPDATE insert_status SET status = 16 WHERE name = 'b4_lap';"
-                                   " UPDATE insert_status SET status = -1 WHERE name = 'mattias';"
-                                   " UPDATE insert_status SET status = -1 WHERE name = 'gustav';")
-                conn_remote.commit()
-            else:
-                cur_remote.execute("UPDATE insert_status SET status = -1 WHERE mac =" + str(get_mac()))
-                conn_remote.commit()
-            print("results inserted from mac:"+str(get_mac()))
-            break;
-        print("checking table")
-        time.sleep(2)
-
 
 def copy_into_table(table, rows):
 
@@ -382,13 +285,10 @@ def copy_into_table(table, rows):
     sio.write('\n'.join('%s %s %s %s %s %s %s %s %s %s %s %s %s %s' % x for x in rows))
     sio.seek(0)
 
-    # Checking if allowed to copy results into remote results
-    order('insert_time')
-
     cur_remote.copy_from(sio, table, sep =' ')
     conn_remote.commit()
     print("Results inserted!")
-    cur_remote.execute("UPDATE insert_status SET insert_time = null WHERE mac = " + str(get_mac()))
+    cur_remote.execute("UPDATE insert_status_new SET insert_time = null WHERE mac = " + str(get_mac()))
     conn_remote.commit()
     # print("3 fast")
     # cur_remote.execute("BEGIN TRANSACTION; "
@@ -404,15 +304,15 @@ def copy_into_special():
     for x in cur.fetchall():
         rows.append(x)
 
-    copy_into_table( "remote_results_test", rows)
+    copy_into_table( "remote_results_"+str(get_mac()), rows)
 
 def order(type):
     print("Checking table "+str(type))
-    cur_remote.execute("UPDATE insert_status SET " + str(type) + " = now() WHERE mac = " + str(get_mac()))
+    cur_remote.execute("UPDATE insert_status_new SET " + str(type) + " = now() WHERE mac = " + str(get_mac()))
     conn_remote.commit()
 
     while True:
-        cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT min(" + str(type) + ") FROM insert_status)")
+        cur_remote.execute("SELECT mac FROM insert_status_new WHERE " + str(type) + "=(SELECT min(" + str(type) + ") FROM insert_status_new)")
         if (cur_remote.fetchone()[0] == get_mac()):
             return True;
         time.sleep(2)
@@ -423,20 +323,20 @@ def order(type):
 # End of function definitions
 
 # Connection global to be used everywhere.
-#TP4030
-conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+TP4030
+#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -451,6 +351,10 @@ def main():
     limit = 1000
 
     cur.execute("DROP TABLE if exists all_results")
+    cur_remote.execute("drop table if exists remote_results_"+str(get_mac())+"")
+    cur_remote.execute("CREATE TABLE IF NOT EXISTS remote_results_"+str(get_mac())+"(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, "
+               "geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, "
+               " speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
 
     i = 0
     while i < 1:

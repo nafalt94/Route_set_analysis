@@ -333,44 +333,6 @@ def update_result(assignment, status):
     conn_remote.commit()
     print("Update complete")
 
-def allowed_update():
-    print("Done with script checking if computer can start inserting!")
-    while True:
-        cur_remote.execute("SELECT mac FROM insert_status WHERE status=(SELECT max(status) FROM insert_status)")
-        mymac = cur_remote.fetchone()[0]
-        #print("mymac is ", mymac)
-        #print("get mac is ", get_mac())
-        if (mymac == get_mac()):
-            copy_into_special()
-            cur_remote.execute("SELECT count(*) FROM insert_status WHERE status <> -1")
-            if cur_remote.fetchone()[0] == 1:
-                cur_remote.execute(" UPDATE insert_status SET status = 1 WHERE name = 'a1_pc';"
-                                   " UPDATE insert_status SET status = 2 WHERE name = 'a1_lap';"
-                                   " UPDATE insert_status SET status = 3 WHERE name = 'a2_pc';"
-                                   " UPDATE insert_status SET status = 4 WHERE name = 'a2_lap';"
-                                   " UPDATE insert_status SET status = 5 WHERE name = 'a3_pc';"
-                                   " UPDATE insert_status SET status = 6 WHERE name = 'a3_lap';"
-                                   " UPDATE insert_status SET status = 7 WHERE name = 'a4_pc';"
-                                   " UPDATE insert_status SET status = 8 WHERE name = 'a4_lap';"
-                                   " UPDATE insert_status SET status = 9 WHERE name = 'b1_pc';"
-                                   " UPDATE insert_status SET status = 10 WHERE name = 'b1_lap';"
-                                   " UPDATE insert_status SET status = 11 WHERE name = 'b2_pc';"
-                                   " UPDATE insert_status SET status = 12 WHERE name = 'b2_lap';"
-                                   " UPDATE insert_status SET status = 13 WHERE name = 'b3_pc';"
-                                   " UPDATE insert_status SET status = -1 WHERE name = 'b3_lap';"
-                                   " UPDATE insert_status SET status = 15 WHERE name = 'b4_pc';"
-                                   " UPDATE insert_status SET status = 16 WHERE name = 'b4_lap';"
-                                   " UPDATE insert_status SET status = -1 WHERE name = 'mattias';"
-                                   " UPDATE insert_status SET status = -1 WHERE name = 'gustav';")
-                conn_remote.commit()
-            else:
-                cur_remote.execute("UPDATE insert_status SET status = -1 WHERE mac =" + str(get_mac()))
-                conn_remote.commit()
-            print("results inserted from mac:"+str(get_mac()))
-            break;
-        print("checking table")
-        time.sleep(2)
-
 
 def copy_into_table(table, rows):
 
