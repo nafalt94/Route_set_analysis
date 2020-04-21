@@ -323,7 +323,7 @@ def order(type):
 # End of function definitions
 
 # Connection global to be used everywhere.
-TP4030
+#TP4030
 #conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
@@ -348,7 +348,7 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap = 0.8
-    limit = 1000
+    limit = 100
 
     cur.execute("DROP TABLE if exists all_results")
     cur_remote.execute("drop table if exists remote_results_"+str(get_mac())+"")
