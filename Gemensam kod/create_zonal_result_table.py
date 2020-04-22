@@ -51,7 +51,15 @@ def createEmmeResults(origins,destinations, removed_lids):
     sum_all_affected = 0
     count = 0
 
+    print_count = 1
+
     while i < len(origins):
+
+        if i == round(print_count * len(origins) / 100):
+            print_count += 1
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print("Finished with " + str(100*i / len(origins)) + "% kl: " + dt_string)
 
         effect = odEffect(origins[i], destinations[i], removed_lid_string)
         if effect != -1:
