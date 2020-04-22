@@ -20,6 +20,8 @@ select count(*) from remote_results_test limit 10
 	FROM all_od_pairs_test
 	GROUP BY status
 
+a2 lap
+a2 desk
 
 /För att nollställa insert_table
 UPDATE insert_status SET status = 1 WHERE name = 'a1_pc';
