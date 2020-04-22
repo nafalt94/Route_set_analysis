@@ -223,18 +223,18 @@ def fetch_update(limit):
     mac = get_mac()
 
     #Check if any assignments needs to be finished
-    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test_new WHERE status = "+str(mac))
+    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
     assignment = cur_remote.fetchall()
     #print("assignment: "+str(assignment))
 
     if not assignment:
-        cur_remote.execute("WITH cte AS (select * from all_od_pairs_test_new "
+        cur_remote.execute("WITH cte AS (select * from all_od_pairs_test "
                     "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
-                    "UPDATE all_od_pairs_test_new a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+                    "UPDATE all_od_pairs_test a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
         conn_remote.commit()
-        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test_new WHERE status = "+str(mac))
+        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
-    cur_remote.execute("UPDATE insert_status_new SET fetch_time = null WHERE mac = " + str(get_mac()))
+    cur_remote.execute("UPDATE insert_status SET fetch_time = null WHERE mac = " + str(get_mac()))
     conn_remote.commit()
     return assignment
 
@@ -267,9 +267,9 @@ def update_result(assignment, status):
                       " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
 
     cur_remote.execute(" BEGIN TRANSACTION;"
-                       " UPDATE all_od_pairs_test_new SET status = temp_table.status, time_updated = NOW() FROM temp_table "
-                       " WHERE all_od_pairs_test_new.origin = temp_table.origin and "
-                       " all_od_pairs_test_new.destination = temp_table.destination; "
+                       " UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
+                       " WHERE all_od_pairs_test.origin = temp_table.origin and "
+                       " all_od_pairs_test.destination = temp_table.destination; "
                        "COMMIT ;")
     cur_remote.execute("DROP TABLE temp_table")
     conn_remote.commit()
@@ -288,7 +288,7 @@ def copy_into_table(table, rows):
     cur_remote.copy_from(sio, table, sep =' ')
     conn_remote.commit()
     print("Results inserted!")
-    cur_remote.execute("UPDATE insert_status_new SET insert_time = null WHERE mac = " + str(get_mac()))
+    cur_remote.execute("UPDATE insert_status SET insert_time = null WHERE mac = " + str(get_mac()))
     conn_remote.commit()
     # print("3 fast")
     # cur_remote.execute("BEGIN TRANSACTION; "
@@ -308,11 +308,11 @@ def copy_into_special():
 
 def order(type):
     print("Checking table "+str(type))
-    cur_remote.execute("UPDATE insert_status_new SET " + str(type) + " = now() WHERE mac = " + str(get_mac()))
+    cur_remote.execute("UPDATE insert_status SET " + str(type) + " = now() WHERE mac = " + str(get_mac()))
     conn_remote.commit()
 
     while True:
-        cur_remote.execute("SELECT mac FROM insert_status_new WHERE " + str(type) + "=(SELECT min(" + str(type) + ") FROM insert_status_new)")
+        cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT min(" + str(type) + ") FROM insert_status)")
         if (cur_remote.fetchone()[0] == get_mac()):
             return True;
         time.sleep(2)
@@ -323,20 +323,20 @@ def order(type):
 # End of function definitions
 
 # Connection global to be used everywhere.
-TP4030
-#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+#TP4030
+conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -348,7 +348,7 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap = 0.8
-    limit = 1000
+    limit = 100
 
     cur.execute("DROP TABLE if exists all_results")
     cur_remote.execute("drop table if exists remote_results_"+str(get_mac())+"")
