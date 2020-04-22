@@ -324,7 +324,9 @@ def order(type):
 
 # Connection global to be used everywhere.
 #TP4030
+
 conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+
 
 #Gustav och Mattias
 #conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
