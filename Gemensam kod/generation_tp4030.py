@@ -255,11 +255,11 @@ def generate_assignments(my, threshold, max_overlap,assignment):
     i = 0
     print_count = 1
     while i < len(assignment):
-        if i == print_count*len(assignment)/5:
+        if i == round(print_count*len(assignment)/10):
             print_count += 1
             now = datetime.now()
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            print("Finished with " + str(i/len(assignment)) + "kl: " + dt_string)
+            print("Finished with " + str(round(i/len(assignment), 2)) + " time: " + dt_string)
 
         status.append(routeSetGeneration(assignment[i][0], assignment[i][1], my, threshold, max_overlap))
         i += 1
@@ -291,16 +291,22 @@ def copy_into_table(table, rows):
     # cur_remote.execute("CREATE TEMP TABLE IF NOT EXISTS copy_temp_table(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT,"
     #                    " geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION,"
     #                    "speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
-
+    print("tid 3")
     sio = StringIO()
-    sio.write('\n'.join('%s %s %s %s %s %s %s %s %s %s %s %s %s %s' % x for x in rows))
+    sio.write('\n'.join('%s %s %s %s %s %s' % x for x in rows))
+    print("tid 4")
     sio.seek(0)
-
+    print("tid 5")
     cur_remote.copy_from(sio, table, sep =' ')
+    print("tid 6")
     conn_remote.commit()
+    print("tid 7")
     print("Results inserted!")
+    print("tid 8")
     cur_remote.execute("UPDATE insert_status SET insert_time = null WHERE mac = " + str(get_mac()))
+    print("tid 9")
     conn_remote.commit()
+    print("tid 10")
     # print("3 fast")
     # cur_remote.execute("BEGIN TRANSACTION; "
     #                    "INSERT into "+table+" select * from copy_temp_table ON CONFLICT DO NOTHING; COMMIT ;")
@@ -308,14 +314,15 @@ def copy_into_table(table, rows):
 
 
 def copy_into_special(min_id):
-    cur.execute("SELECT * FROM all_results")
+    cur.execute("SELECT did, start_zone, end_zone, lid, link_cost, path_seq  FROM all_results")
 
     rows = []
     i = 0
+    print("tid 1")
     for x in cur.fetchall():
         rows.append(x)
-
-    copy_into_table("remote_results_zone"+str(min_id), rows)
+    print("tid 2")
+    copy_into_table("remote_results"+str(min_id), rows)
 
 def order(type):
     print("Checking table "+str(type))
@@ -378,11 +385,11 @@ def main():
         assignment, min_id = fetch_update(limit)
 
         print(str(len(assignment)/1000))
-        split_assignment = np.array_split(assignment, math.ceil(len(assignment)/100))
+        split_assignment = np.array_split(assignment, math.ceil(len(assignment)/1000))
 
         i = 0
         for x in split_assignment:
-            print("")
+            print("min id", min_id)
             status = generate_assignments(my, threshold, max_overlap, x)
             update_result(x, status)
 
