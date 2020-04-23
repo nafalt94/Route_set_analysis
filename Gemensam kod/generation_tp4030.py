@@ -223,16 +223,24 @@ def fetch_update(limit):
     mac = get_mac()
 
     #Check if any assignments needs to be finished
-    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
+    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac))
     assignment = cur_remote.fetchall()
     #print("assignment: "+str(assignment))
+    intervals = [6772, 6864, 6956, 7048, 7140, 7232, 7324, 7416, 7508, 7600, 7692, 7784, 7876, 7968]
 
     if not assignment:
-        cur_remote.execute("WITH cte AS (select * from all_od_pairs_test "
-                    "where (EXTRACT(EPOCH FROM (NOW() - time_updated)) > 1 or time_updated IS NULL) and status = -1 limit "+str(limit)+") "
-                    "UPDATE all_od_pairs_test a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
+        cur_remote.execute("SELECT min(origin) FROM all_od_pairs_order WHERE status = -1")
+        min_origin = cur_remote.fetchone()[0]
+        for x in range(len(intervals)):
+            if min_origin >= intervals[x] and min_origin < intervals[x+1]:
+                max_origin = intervals[x+1]
+                print(str(max_origin))
+
+        cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
+                    "where origin >= " + str(min_origin) + " and origin < " + str(max_origin) + ") "
+                    "UPDATE all_od_pairs_order a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
         conn_remote.commit()
-        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_test WHERE status = "+str(mac))
+        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac))
         assignment = cur_remote.fetchall()
     cur_remote.execute("UPDATE insert_status SET fetch_time = null WHERE mac = " + str(get_mac()))
     conn_remote.commit()
@@ -304,7 +312,7 @@ def copy_into_special():
     for x in cur.fetchall():
         rows.append(x)
 
-    copy_into_table( "remote_results_"+str(get_mac()), rows)
+    copy_into_table("remote_results_"+str(get_mac()), rows)
 
 def order(type):
     print("Checking table "+str(type))
@@ -315,7 +323,7 @@ def order(type):
         cur_remote.execute("SELECT mac FROM insert_status WHERE " + str(type) + "=(SELECT min(" + str(type) + ") FROM insert_status)")
         if (cur_remote.fetchone()[0] == get_mac()):
             return True;
-        time.sleep(2)
+        time.sleep(1)
         print("Waiting...")
 
 
@@ -325,20 +333,20 @@ def order(type):
 # Connection global to be used everywhere.
 #TP4030
 
-conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 
 #Gustav och Mattias
-#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()
@@ -353,16 +361,14 @@ def main():
     limit = 100
 
     cur.execute("DROP TABLE if exists all_results")
-    cur_remote.execute("drop table if exists remote_results_"+str(get_mac())+"")
-    cur_remote.execute("CREATE TABLE IF NOT EXISTS remote_results_"+str(get_mac())+"(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT, "
-               "geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION, "
-               " speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
 
     i = 0
     while i < 1:
+
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         print("Start: " + dt_string)
+
         try:
             order('fetch_time')
             assignment = fetch_update(limit)
@@ -370,13 +376,13 @@ def main():
             if not assignment:
                 break
 
-            status = generate_assignments(my, threshold, max_overlap,assignment)
-            update_result(assignment, status)
-            now = datetime.now()
-            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            print("uppdaterat "+str(limit)+"st kl: " + dt_string)
-            copy_into_special()
-            cur.execute("DROP TABLE if exists all_results")
+            # status = generate_assignments(my, threshold, max_overlap,assignment)
+            # update_result(assignment, status)
+            # now = datetime.now()
+            # dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            # print("uppdaterat "+str(limit)+"st kl: " + dt_string)
+            # copy_into_special()
+            # cur.execute("DROP TABLE if exists all_results")
         except Exception as exptest:
             conn_remote.commit()
             print("Exception i While loop "+ str(exptest))
