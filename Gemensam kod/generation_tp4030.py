@@ -7,6 +7,7 @@ import sys
 from datetime import datetime
 import psycopg2
 import numpy as np
+import math
 from io import StringIO
 
 #For att fa MAC-address
@@ -223,28 +224,30 @@ def fetch_update(limit):
     mac = get_mac()
 
     #Check if any assignments needs to be finished
-    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac))
-    assignment = cur_remote.fetchall()
+    # cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac))
+    # assignment = cur_remote.fetchall()
     #print("assignment: "+str(assignment))
     intervals = [6772, 6864, 6956, 7048, 7140, 7232, 7324, 7416, 7508, 7600, 7692, 7784, 7876, 7968]
 
-    if not assignment:
-        cur_remote.execute("SELECT min(origin) FROM all_od_pairs_order WHERE status = -1")
-        min_origin = cur_remote.fetchone()[0]
-        for x in range(len(intervals)):
-            if min_origin >= intervals[x] and min_origin < intervals[x+1]:
-                max_origin = intervals[x+1]
-                print(str(max_origin))
+    cur_remote.execute("SELECT min(origin) FROM all_od_pairs_order WHERE status = -1")
+    min_origin = cur_remote.fetchone()[0]
+    i = 1;
+    for x in range(len(intervals)):
 
-        cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
+        if min_origin >= intervals[x] and min_origin < intervals[x+1]:
+            max_origin = intervals[x+1]
+            min_id = i;
+            print(str(max_origin))
+        i += 1
+    cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
                     "where origin >= " + str(min_origin) + " and origin < " + str(max_origin) + ") "
                     "UPDATE all_od_pairs_order a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
-        conn_remote.commit()
-        cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac))
-        assignment = cur_remote.fetchall()
+    conn_remote.commit()
+    cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac)+ "order by origin")
+    assignment = cur_remote.fetchall()
     cur_remote.execute("UPDATE insert_status SET fetch_time = null WHERE mac = " + str(get_mac()))
     conn_remote.commit()
-    return assignment
+    return assignment, min_id
 
 def generate_assignments(my, threshold, max_overlap,assignment):
     print("Starting route set generation")
@@ -275,9 +278,9 @@ def update_result(assignment, status):
                       " unnest(ARRAY["+str(destination)+"]) as destination, unnest(ARRAY["+str(status)+"]) as status ")
 
     cur_remote.execute(" BEGIN TRANSACTION;"
-                       " UPDATE all_od_pairs_test SET status = temp_table.status, time_updated = NOW() FROM temp_table "
-                       " WHERE all_od_pairs_test.origin = temp_table.origin and "
-                       " all_od_pairs_test.destination = temp_table.destination; "
+                       " UPDATE all_od_pairs_order SET status = temp_table.status, time_updated = NOW() FROM temp_table "
+                       " WHERE all_od_pairs_order.origin = temp_table.origin and "
+                       " all_od_pairs_order.destination = temp_table.destination; "
                        "COMMIT ;")
     cur_remote.execute("DROP TABLE temp_table")
     conn_remote.commit()
@@ -304,7 +307,7 @@ def copy_into_table(table, rows):
     # conn_remote.commit()
 
 
-def copy_into_special():
+def copy_into_special(min_id):
     cur.execute("SELECT * FROM all_results")
 
     rows = []
@@ -312,7 +315,7 @@ def copy_into_special():
     for x in cur.fetchall():
         rows.append(x)
 
-    copy_into_table("remote_results_"+str(get_mac()), rows)
+    copy_into_table("remote_results_zone"+str(min_id), rows)
 
 def order(type):
     print("Checking table "+str(type))
@@ -363,29 +366,35 @@ def main():
     cur.execute("DROP TABLE if exists all_results")
 
     i = 0
-    while i < 1:
+#   while i < 1:
 
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        print("Start: " + dt_string)
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    print("Start: " + dt_string)
 
-        try:
-            order('fetch_time')
-            assignment = fetch_update(limit)
+    try:
+        while order('fetch_time') is not True:
+           dummy = 1
+        assignment, min_id = fetch_update(limit)
 
-            if not assignment:
-                break
+        print(str(len(assignment)/1000))
+        split_assignment = np.array_split(assignment, math.ceil(len(assignment)/100))
 
-            # status = generate_assignments(my, threshold, max_overlap,assignment)
-            # update_result(assignment, status)
-            # now = datetime.now()
-            # dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            # print("uppdaterat "+str(limit)+"st kl: " + dt_string)
-            # copy_into_special()
-            # cur.execute("DROP TABLE if exists all_results")
-        except Exception as exptest:
-            conn_remote.commit()
-            print("Exception i While loop "+ str(exptest))
+        i = 0
+        for x in split_assignment:
+            print("")
+            status = generate_assignments(my, threshold, max_overlap, x)
+            update_result(x, status)
+
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print("uppdaterat "+str(limit)+"st kl: " + dt_string)
+
+            copy_into_special(min_id)
+            cur.execute("DROP TABLE if exists all_results")
+    except Exception as exptest:
+        conn_remote.commit()
+        print("Exception  "+ str(exptest))
 
 
 
