@@ -358,7 +358,7 @@ def main():
     my = 0.01
     threshold = 1.3
     max_overlap = 0.8
-    limit = 100
+    limit = 1000
 
     cur.execute("DROP TABLE if exists all_results")
 
