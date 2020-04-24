@@ -240,7 +240,7 @@ def fetch_update(limit):
     #         print(str(max_origin))
     #     i += 1
 
-    # Hård kodat
+    # Hårdkodat
     min_id = 14
     max_origin = 8011
 
