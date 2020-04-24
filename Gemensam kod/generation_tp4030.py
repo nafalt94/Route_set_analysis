@@ -240,9 +240,9 @@ def fetch_update(limit):
     #         print(str(max_origin))
     #     i += 1
 
-    # Hård kodat
+    # Hårdkodat
     min_id = 14
-    max_origin = 8011
+    max_origin = 8012
 
     cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
                     "where origin >= " + str(min_origin) + " and origin < " + str(max_origin) + ") "
