@@ -4,6 +4,8 @@ import sys
 from datetime import datetime
 import psycopg2
 import numpy as np
+#For att fa MAC-address
+from uuid import getnode as get_mac
 
 print(__name__)
 
@@ -129,7 +131,7 @@ def affected_pairs(lids,tabel_nr):
     removed_lid_string += ")"
 
     # ORDER BY verkar ta tid. Att göra: indexera remote_results på start_zone
-    cur_remote.execute("select start_zone,end_zone from remote_results"+str(tabel_nr)+" where did = 1 and " + removed_lid_string+" order by start_zone ")
+    cur_remote.execute("select start_zone,end_zone from remote_results"+str(tabel_nr)+" where " + removed_lid_string+" and did = 1 order by start_zone ")
 
     all_pairs = cur_remote.fetchall()
     origins = [r[0] for r in all_pairs]
@@ -139,7 +141,10 @@ def affected_pairs(lids,tabel_nr):
 
 
 # Connection global to be used everywhere.
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+#TP4030
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#Gustav och Mattias
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
@@ -162,7 +167,6 @@ def main():
     #För att ta reda på vilken tabell som ska arbetas med:
     cur_remote.execute("SELECT update_order FROM insert_status WHERE mac = " + str(get_mac()))
     tabel_nr = cur_remote.fetchone()[0]
-    tabel_nr = 1
 
     lists = affected_pairs(removed_lids,tabel_nr)
     print("klart med lista")
