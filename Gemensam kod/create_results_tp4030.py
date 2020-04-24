@@ -4,6 +4,8 @@ import sys
 from datetime import datetime
 import psycopg2
 import numpy as np
+#For att fa MAC-address
+from uuid import getnode as get_mac
 
 print(__name__)
 
@@ -31,7 +33,7 @@ def tic():
 # Initialize TicToc function.
 TicToc = TicTocGenerator()
 
-def createEmmeResults(origins,destinations, removed_lids):
+def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
 
     # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
     # Create emme_result table
@@ -61,7 +63,7 @@ def createEmmeResults(origins,destinations, removed_lids):
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
             print("Finished with " + str(100*i / len(origins)) + "% kl: " + dt_string)
 
-        effect = odEffect(origins[i], destinations[i], removed_lid_string)
+        effect = odEffect(origins[i], destinations[i], removed_lid_string,tabel_nr)
         if effect != -1:
             sum += effect
             count += 1
@@ -85,14 +87,14 @@ def createEmmeResults(origins,destinations, removed_lids):
             count = 0
         i += 1
 
-def odEffect(start, end, removed_lid_string):
+def odEffect(start, end, removed_lid_string,tabel_nr):
     start_zone = start
     end_zone = end
 
     # Finding best, non-affected alternative route
-    cur_remote.execute("SELECT MIN(did) FROM remote_results WHERE "
+    cur_remote.execute("SELECT MIN(did) FROM remote_results"+str(tabel_nr)+" WHERE "
                       " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
-                    " did NOT IN (select did from remote_results where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
+                    " did NOT IN (select did from remote_results"+str(tabel_nr)+" where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
 
     id_alt = str(cur_remote.fetchone()[0])
     #print("id_alt är: "+ id_alt)
@@ -105,7 +107,7 @@ def odEffect(start, end, removed_lid_string):
         # print("Zon påverkas och bästa id är:" + id_alt)
 
         # Fetching cost of the optimal route and the alternative
-        cur_remote.execute("SELECT sum(link_cost) from remote_results where "
+        cur_remote.execute("SELECT sum(link_cost) from remote_results"+str(tabel_nr)+" where "
                           " (start_zone = " + str(start_zone) + " AND end_zone = " + str(end_zone) + ") AND "
                             "(did = 1 OR did = " + str(id_alt) + ") group by did")
         # Best cost
@@ -118,7 +120,7 @@ def odEffect(start, end, removed_lid_string):
         # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return (float(cost_alt) / float(cost_opt))
 
-def affected_pairs(lids):
+def affected_pairs(lids,tabel_nr):
 
     #Create string of chosen lids to analyse
     removed_lid_string = "( lid = " + str(lids[0])
@@ -129,7 +131,7 @@ def affected_pairs(lids):
     removed_lid_string += ")"
 
     # ORDER BY verkar ta tid. Att göra: indexera remote_results på start_zone
-    cur_remote.execute("select start_zone,end_zone from remote_results where did = 1 and " + removed_lid_string+" order by start_zone ")
+    cur_remote.execute("select start_zone,end_zone from remote_results"+str(tabel_nr)+" where " + removed_lid_string+" and did = 1 order by start_zone ")
 
     all_pairs = cur_remote.fetchall()
     origins = [r[0] for r in all_pairs]
@@ -139,7 +141,10 @@ def affected_pairs(lids):
 
 
 # Connection global to be used everywhere.
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123",port=5455)
+#TP4030
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#Gustav och Mattias
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
@@ -159,9 +164,13 @@ def main():
     # print(str(odEffect(6772, 6773, [83443, 84145])))
 
 
-    lists = affected_pairs(removed_lids)
+    #För att ta reda på vilken tabell som ska arbetas med:
+    cur_remote.execute("SELECT update_order FROM insert_status WHERE mac = " + str(get_mac()))
+    tabel_nr = cur_remote.fetchone()[0]
+
+    lists = affected_pairs(removed_lids,tabel_nr)
     print("klart med lista")
-    createEmmeResults(lists[0],lists[1], removed_lids)
+    createEmmeResults(lists[0],lists[1], removed_lids,tabel_nr)
 
     #print(str(affected_pairs(removed_lids)[0]))
     toc()

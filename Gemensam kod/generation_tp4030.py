@@ -227,11 +227,12 @@ def fetch_update(limit):
     # cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac))
     # assignment = cur_remote.fetchall()
     #print("assignment: "+str(assignment))
-    intervals = [6772, 6864, 6956, 7048, 7140, 7232, 7324, 7416, 7508, 7600, 7692, 7784, 7876, 7968]
+    intervals = [6772, 6864, 6956, 7048, 7140, 7232, 7324, 7416, 7508, 7600, 7692, 7784, 7876, 7968, 8012]
 
     cur_remote.execute("SELECT min(origin) FROM all_od_pairs_order WHERE status = -1")
     min_origin = cur_remote.fetchone()[0]
     i = 1;
+
     # for x in range(len(intervals)):
     #
     #     if min_origin >= intervals[x] and min_origin < intervals[x+1]:
@@ -243,6 +244,7 @@ def fetch_update(limit):
     # Hårdkodat
     min_id = 14
     max_origin = 8012
+
 
     cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
                     "where origin >= " + str(min_origin) + " and origin < " + str(max_origin) + ") "
