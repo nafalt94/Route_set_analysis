@@ -232,13 +232,18 @@ def fetch_update(limit):
     cur_remote.execute("SELECT min(origin) FROM all_od_pairs_order WHERE status = -1")
     min_origin = cur_remote.fetchone()[0]
     i = 1;
-    for x in range(len(intervals)):
+    # for x in range(len(intervals)):
+    #
+    #     if min_origin >= intervals[x] and min_origin < intervals[x+1]:
+    #         max_origin = intervals[x+1]
+    #         min_id = i;
+    #         print(str(max_origin))
+    #     i += 1
 
-        if min_origin >= intervals[x] and min_origin < intervals[x+1]:
-            max_origin = intervals[x+1]
-            min_id = i;
-            print(str(max_origin))
-        i += 1
+    # Hård kodat
+    min_id = 14
+    max_origin = 8011
+
     cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
                     "where origin >= " + str(min_origin) + " and origin < " + str(max_origin) + ") "
                     "UPDATE all_od_pairs_order a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW() FROM cte WHERE  cte.id = a.id;")
