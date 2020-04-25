@@ -142,16 +142,20 @@ def affected_pairs(lids,tabel_nr):
 
 # Connection global to be used everywhere.
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
 
 def main():
     tic()
-    removed_lids = [83025,84145,83443,82268,82267]
+
+    # Gamla lids
+    removed_lids = [83025, 84145, 83443, 82268, 82267]
+    # Gröndalsbron
+    removed_lids = [82763, 83481]
 
     # cur_remote.execute("select start_zone from remote_results group by start_zone limit 10")
     # all_zones = cur_remote.fetchall()
