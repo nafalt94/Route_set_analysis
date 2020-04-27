@@ -131,7 +131,7 @@ def affected_pairs(lids,tabel_nr):
     removed_lid_string += ")"
 
     # ORDER BY verkar ta tid. Att göra: indexera remote_results på start_zone
-    cur_remote.execute("select start_zone,end_zone from remote_results"+str(tabel_nr)+" where " + removed_lid_string+" and did = 1 order by start_zone ")
+    cur_remote.execute("select distinct start_zone,end_zone from remote_results"+str(tabel_nr)+" where " + removed_lid_string+" and did = 1 order by start_zone ")
 
     all_pairs = cur_remote.fetchall()
     origins = [r[0] for r in all_pairs]

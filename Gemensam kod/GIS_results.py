@@ -88,10 +88,10 @@ def fetchResults():
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     ############################ Create layer for nr_affected OD-pairs
-    sqlcall = "(SELECT * FROM emme_results)"
+    sqlcall = "(select *, cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM emme_results) as float) as prop_affected from emme_results)"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "nr_affected ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "prop_affected ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     values = (
@@ -111,7 +111,7 @@ def fetchResults():
         ranges.append(rng)
 
     ## create the renderer and assign it to a layer
-    expression = 'nr_affected'  # field name
+    expression = 'prop_affected'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
 # DATABASE CONNECTION ------------------------------------------------------
