@@ -96,10 +96,10 @@ def fetchResults():
 
     values = (
         ('0 affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
-        ('1 affected pairs', 1, 1, QColor.fromRgb(102, 255, 102)),
-        ('1-5 affected pairs', 1, 5, QColor.fromRgb(255, 255, 153)),
-        ('5-10 affected pairs', 5, 10, QColor.fromRgb(255, 178, 102)),
-        ('10-many affected pairs', 10, 100000, QColor.fromRgb(255, 102, 102)),
+        ('1 affected pairs', 0.00000000000000000000001, 0.05, QColor.fromRgb(102, 255, 102)),
+        ('1-5 affected pairs', 0.05, 0.2, QColor.fromRgb(255, 255, 153)),
+        ('5-10 affected pairs', 0.2, 0.4, QColor.fromRgb(255, 178, 102)),
+        ('10-many affected pairs', 0.4, 1, QColor.fromRgb(255, 102, 102)),
     )
 
     # create a category for each item in values
