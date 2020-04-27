@@ -79,7 +79,7 @@ def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
             else:
                 mean_det = sum/count
             # result is: [nr all routes affected,mean_deterioration,nr affected OD-pairs]
-            result = [sum_all_affected,mean_det,count]
+            result = [sum_all_affected,mean_det,(count + sum_all_affected)]
             cur_remote.execute("UPDATE emme_results SET nr_all_routes_affected = " + str(result[0]) + " , mean_deterioration = " +
                 str(result[1]) + ",nr_affected = " + str(result[2]) + "  WHERE id = " + str(origins[i]) + ";")
             sum = 0
@@ -175,6 +175,7 @@ def main():
     lists = affected_pairs(removed_lids,tabel_nr)
     print("klart med lista")
     createEmmeResults(lists[0],lists[1], removed_lids,tabel_nr)
+    print("Klar")
 
     #print(str(affected_pairs(removed_lids)[0]))
     toc()
