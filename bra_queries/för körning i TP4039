@@ -36,3 +36,9 @@ CREATE INDEX geom_idx ON remote_results (geom);
 CREATE INDEX did_idx ON remote_results (did);
 CREATE INDEX start_idx ON remote_results (start_zone);
 CREATE INDEX end_idx ON remote_results (end_zone);
+
+
+#Tolka 20% som inte får resultat:
+select origin,assigned_to, count(*) as cnt,geom from all_od_pairs_order
+	inner join emme_zones ON all_od_pairs_order.origin = emme_zones.id  where all_od_pairs_order.status = 3 
+	group by origin, assigned_to,geom
