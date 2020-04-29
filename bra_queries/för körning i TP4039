@@ -42,3 +42,6 @@ CREATE INDEX end_idx ON remote_results (end_zone);
 select origin,assigned_to, count(*) as cnt,geom from all_od_pairs_order
 	inner join emme_zones ON all_od_pairs_order.origin = emme_zones.id  where all_od_pairs_order.status = 3 
 	group by origin, assigned_to,geom
+
+#Nollställa emme_results
+UPDATE emme_results SET nr_all_routes_affected = 0, mean_deterioration = 0, nr_affected = 0
