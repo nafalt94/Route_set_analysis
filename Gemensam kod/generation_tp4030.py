@@ -233,17 +233,17 @@ def fetch_update(limit):
     min_origin = cur_remote.fetchone()[0]
     i = 1;
 
-    # for x in range(len(intervals)):
-    #
-    #     if min_origin >= intervals[x] and min_origin < intervals[x+1]:
-    #         max_origin = intervals[x+1]
-    #         min_id = i;
-    #         print(str(max_origin))
-    #     i += 1
+    for x in range(len(intervals)):
+
+        if min_origin >= intervals[x] and min_origin < intervals[x+1]:
+            max_origin = intervals[x+1]
+            min_id = i;
+            print(str(max_origin))
+        i += 1
 
     # Hårdkodat
-    min_id = 14
-    max_origin = 8012
+    # min_id = 14
+    # max_origin = 8012
 
 
     cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
