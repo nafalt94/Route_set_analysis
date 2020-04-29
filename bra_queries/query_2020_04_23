@@ -1,0 +1,58 @@
+select * from all_od_pairs_order WHERE assigned_to = 5025763207074 order by origin DESC
+select distinct assigned_to from all_od_pairs_order
+select * from all_od_pairs_order WHERE origin = 6864
+select min(origin),max(origin) from all_od_pairs_order where assigned_to is not null
+analyze all_od_pairs_order
+
+select * from od_lid order by 
+
+select * from insert_status
+
+select * from all_od_pairs_order where origin >= (select min(origin) from all_od_pairs_order where status = -1)
+and origin <= (select min(origin) from all_od_pairs_order where status = -1) + 91 order by origin DESC
+
+WITH cte AS (select * from all_od_pairs_order
+                   where origin 
+
+			 UPDATE all_od_pairs_order a SET status = 1,assigned_to = 5555, time_updated = NOW()
+					FROM cte WHERE  cte.id = a.id;
+			 
+			 WITH cte AS (select * from all_od_pairs_test "
+                     )"
+                    "UPDATE all_od_pairs_test a SET status = "+str(mac)+",assigned_to = "+str(mac)+", time_updated = NOW()
+					FROM cte WHERE  cte.id = a.id;
+
+
+
+
+
+
+SELECT a.id as origin, b.id as destination
+INTO all_od_pairs_order from od_lid a  
+CROSS JOIN (select * FROM od_lid) b  WHERE a.id != b.id order by origin;
+	 
+	 ALTER TABLE all_od_pairs_order ADD COLUMN id SERIAL PRIMARY KEY;
+	 
+	 ALTER TABLE all_od_pairs_order ADD COLUMN status BIGINT;
+				 
+				 select distinct start_zone, end_zone from remote_results_zone2
+	 
+	 ALTER TABLE all_od_pairs_order ADD COLUMN assigned_to BIGINT;
+
+	ALTER TABLE all_od_pairs_order ADD COLUMN time_updated timestamp with time zone;
+
+SELECT min(origin) FROM all_od_pairs_order WHERE status = -1
+
+			 select * from remote_results_without_inrix limit 1
+			 
+UPDATE all_od_pairs_order SET status = -1,assigned_to = null where status <> -1;
+UPDATE all_od_pairs_order SET assigned_to = null where assigned_to <> null;
+UPDATE all_od_pairs_order SET time_updated = null;	
+			 
+
+SELECT status,
+   100.0 * COUNT(*)        
+   / SUM(COUNT(*)) OVER () 
+   As "Percentage"
+FROM all_od_pairs_order
+GROUP BY status

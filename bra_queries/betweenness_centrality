@@ -1,0 +1,14 @@
+
+-- Get the number of times each lids has been used by a route. (add where clause for which dids you want.)
+select partitioned_results_no_ferries.lid,  count(partitioned_results_no_ferries.lid) into betweenness_alldid from partitioned_results_no_ferries group by partitioned_results_no_ferries.lid; 
+
+-- Get geom on the lids
+select betweenness_alldid.lid, betweenness_alldid.count, model_graph.geom into betweenness_centrality_alldids from betweenness_alldid INNER JOIN model_graph ON(betweenness_alldid.lid=model_graph.lid);
+
+-- Add betweeness calculations
+ALTER TABLE betweenness_centrality_alldids ADD COLUMN bc double precision;
+UPDATE betweenness_centrality SET bc = (cast(count as float)/cast(1105314 as float));
+
+analyze betweenness_centrality_alldids
+
+select * from betweenness_centrality_alldids
