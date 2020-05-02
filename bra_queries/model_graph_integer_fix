@@ -1,0 +1,17 @@
+CREATE TABLE model_graph (
+    id integer NOT NULL,
+    geom geometry(MultiLineString,3006),
+    lid bigint,
+    start_node bigint,
+    end_node bigint,
+    ref_lids character varying(500) COLLATE pg_catalog."default",
+    orderings character varying(254) COLLATE pg_catalog."default",
+    speed numeric,
+	lanes numeric,
+    fcn_class bigint,
+    internal character varying(254) COLLATE pg_catalog."default",
+    CONSTRAINT model_graph_pkey1 PRIMARY KEY (id)
+)
+select * from model_graph
+
+insert into model_graph select * from model_graph_old
