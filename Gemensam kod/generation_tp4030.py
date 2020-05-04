@@ -233,17 +233,18 @@ def fetch_update(limit):
     min_origin = cur_remote.fetchone()[0]
     i = 1;
 
-    for x in range(len(intervals)):
+    # for x in range(len(intervals)):
+    #
+    #     if min_origin >= intervals[x] and min_origin < intervals[x+1]:
+    #         max_origin = intervals[x+1]
+    #         min_id = i;
+    #         print(str(max_origin))
+    #     i += 1
 
-        if min_origin >= intervals[x] and min_origin < intervals[x+1]:
-            max_origin = intervals[x+1]
-            min_id = i;
-            print(str(max_origin))
-        i += 1
-
-    # Hårdkodat
-    # min_id = 14
-    # max_origin = 8012
+    #Hårdkodat
+    min_id = 6
+    min_origin = 7232
+    max_origin = 7324
 
 
     cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
@@ -378,6 +379,7 @@ def main():
     limit = 1000
 
     cur.execute("DROP TABLE if exists all_results")
+    cur.execute("DROP TABLE if exists cost_table")
 
     i = 0
 #   while i < 1:
