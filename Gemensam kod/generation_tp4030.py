@@ -242,7 +242,7 @@ def fetch_update(limit):
     #     i += 1
 
     #Hårdkodat
-    min_id = 6
+    min_id = 66
     min_origin = 7232
     max_origin = 7324
 
@@ -351,20 +351,20 @@ def order(type):
 # Connection global to be used everywhere.
 #TP4030
 
-conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 
 #Gustav och Mattias
-#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
 
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 
 conn_remote.autocommit = False
 cur_remote = conn_remote.cursor()

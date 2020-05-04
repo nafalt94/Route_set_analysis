@@ -157,6 +157,9 @@ def main():
     # Gröndalsbron
     removed_lids = [82763, 83481]
 
+    #Gröndalsbron endast södergående
+    removed_lids = [83481]
+
     #Alla överfarter till södermalm
     # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
     #                 95360,95361,80922,83802,82323,82386,87551,89520,
