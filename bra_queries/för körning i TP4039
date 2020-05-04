@@ -52,3 +52,7 @@ select avg(max_did)
 from (select start_zone,end_zone, max(did) AS max_did
       from partitioned_results_no_ferries
       group by start_zone,end_zone limit 10000) As maxSalary;
+
+#För att skapa nya partition-tabeller
+CREATE TABLE IF NOT EXISTS remote_results1(did INT, start_zone INT, end_zone INT, lid BIGINT,
+			link_cost DOUBLE PRECISION, path_seq INT, PRIMARY KEY (start_zone, end_zone,did, path_seq))
