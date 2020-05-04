@@ -40,7 +40,7 @@ def removeRoutesLayers():
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
             layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid"\
                 and str(layer.name()) != "Link used by 3 shortest paths" and str(layer.name()) != "Link used by 0 shortest paths"\
-                and str(layer.name()) != "OD_pairs":
+                and str(layer.name()) != "OD_pairs" and str(layer.name()) != "failed_start_zones":
             QgsProject.instance().removeMapLayer(layer.id())
 
 #Vet inte om dessa två behövs..
@@ -55,12 +55,13 @@ def printRoutes(nr_routes):
         i = i + 1
 
 # Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
-def fetchResults():
+def fetchResults(max_failed):
     #Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
 
     ############################ Create layer for mean deterioration
-    sqlcall = "(SELECT * FROM emme_results)"
+    sqlcall = "(SELECT * FROM emme_results WHERE id NOT IN (SELECT origin FROM all_od_pairs_order " \
+              " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > "+str(max_failed)+" ))"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
     layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
@@ -88,7 +89,8 @@ def fetchResults():
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     ############################ Create layer for nr_affected OD-pairs
-    sqlcall = "(select *, cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM emme_results) as float) as prop_affected from emme_results)"
+    sqlcall = "(select *, cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM emme_results) as float) as prop_affected from emme_results" \
+              " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order where status = 3 GROUP BY origin, assigned_to HAVING count(*) > "+str(max_failed)+") )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
     layer = QgsVectorLayer(uri.uri(), "prop_affected ", "postgres")
@@ -143,8 +145,12 @@ def main():
     removeRoutesLayers()
 
     if db.isValid():
+
+        #Max allowed # of failing OD-pairs for zone to be included in analysis
+        max_failed = 1160
+
         # Variable definitions
-        fetchResults()
+        fetchResults(max_failed)
         toc();
 
 
