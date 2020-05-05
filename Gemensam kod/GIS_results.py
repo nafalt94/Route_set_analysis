@@ -55,12 +55,12 @@ def printRoutes(nr_routes):
         i = i + 1
 
 # Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
-def fetchResults(max_failed):
+def fetchResults(emme_result,max_failed):
     #Removes layers not specified in removeRoutesLayers
     removeRoutesLayers()
 
     ############################ Create layer for mean deterioration
-    sqlcall = "(SELECT * FROM emme_results WHERE id NOT IN (SELECT origin FROM all_od_pairs_order " \
+    sqlcall = "(SELECT * FROM "+str(emme_result)+" WHERE id NOT IN (SELECT origin FROM all_od_pairs_order " \
               " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > "+str(max_failed)+" ))"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
@@ -89,7 +89,7 @@ def fetchResults(max_failed):
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
     ############################ Create layer for nr_affected OD-pairs
-    sqlcall = "(select *, cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM emme_results) as float) as prop_affected from emme_results" \
+    sqlcall = "(select *, cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM "+str(emme_result)+") as float) as prop_affected from "+str(emme_result)+"" \
               " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order where status = 3 GROUP BY origin, assigned_to HAVING count(*) > "+str(max_failed)+") )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
@@ -149,8 +149,10 @@ def main():
         #Max allowed # of failing OD-pairs for zone to be included in analysis
         max_failed = 1160
 
+        emme_result = "emme_results_grondalsbron"
+
         # Variable definitions
-        fetchResults(max_failed)
+        fetchResults(emme_result,max_failed)
         toc();
 
 
