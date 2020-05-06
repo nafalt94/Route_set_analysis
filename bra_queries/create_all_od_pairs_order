@@ -1,0 +1,25 @@
+-- To create all_od_pairs_order
+SELECT a.id as origin, b.id as destination
+INTO all_od_pairs_order from od_lid a  
+CROSS JOIN (select * FROM od_lid) b  WHERE a.id != b.id order by origin;
+	 
+	 ALTER TABLE all_od_pairs_order ADD COLUMN id SERIAL PRIMARY KEY;
+	 
+	 ALTER TABLE all_od_pairs_order ADD COLUMN status BIGINT;
+				 
+				 select distinct start_zone, end_zone from remote_results_zone2
+	 
+	 ALTER TABLE all_od_pairs_order ADD COLUMN assigned_to BIGINT;
+
+	ALTER TABLE all_od_pairs_order ADD COLUMN time_updated timestamp with time zone;
+
+SELECT min(origin) FROM all_od_pairs_order WHERE status = -1
+
+			 select * from remote_results_without_inrix limit 1
+			 
+UPDATE all_od_pairs_order SET status = -1;
+
+-- To clear all_od_pairs_order
+UPDATE all_od_pairs_order SET status = -1,assigned_to = null where status <> -1;
+UPDATE all_od_pairs_order SET assigned_to = null where assigned_to <> null;
+UPDATE all_od_pairs_order SET time_updated = null;	

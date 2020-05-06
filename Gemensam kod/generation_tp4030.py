@@ -380,7 +380,7 @@ def main():
 
     cur.execute("DROP TABLE if exists all_results")
     cur.execute("DROP TABLE if exists cost_table")
-
+    
     i = 0
 #   while i < 1:
 
