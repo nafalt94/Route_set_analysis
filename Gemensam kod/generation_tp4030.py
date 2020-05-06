@@ -48,6 +48,7 @@ def comp(var1, var2, t):
 
 # Send in zone number and get start node number of that zone.
 def genonenode(zone):
+    cur.execute("DROP TABLE IF EXISTS od_lid")
     cur.execute("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
                 ORDER BY id, distance) AS score, id, lid, start_node, distance \
                 FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
