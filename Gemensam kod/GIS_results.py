@@ -56,8 +56,6 @@ def printRoutes(nr_routes):
 
 # Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
 def fetchResults(emme_result,max_failed):
-    #Removes layers not specified in removeRoutesLayers
-    removeRoutesLayers()
 
     ############################ Create layer for mean deterioration
     sqlcall = "(SELECT * FROM "+str(emme_result)+" WHERE id NOT IN (SELECT origin FROM all_od_pairs_order " \
@@ -142,7 +140,7 @@ if db.isValid():
 
 def main():
     tic()
-    removeRoutesLayers()
+    #removeRoutesLayers()
 
     if db.isValid():
 
