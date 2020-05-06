@@ -48,7 +48,6 @@ def comp(var1, var2, t):
 
 # Send in zone number and get start node number of that zone.
 def genonenode(zone):
-    cur.execute("DROP TABLE IF EXISTS od_lid")
     cur.execute("CREATE TABLE IF NOT EXISTS od_lid AS (SELECT * FROM(SELECT ROW_NUMBER() OVER (PARTITION BY id \
                 ORDER BY id, distance) AS score, id, lid, start_node, distance \
                 FROM(SELECT emme.id, lid, start_node, ST_distance(geom, emme_centroid) AS \
@@ -354,7 +353,6 @@ def order(type):
 
 conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
-
 #Gustav och Mattias
 #conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
@@ -381,6 +379,7 @@ def main():
 
     cur.execute("DROP TABLE if exists all_results")
     cur.execute("DROP TABLE if exists cost_table")
+    cur.execute("DROP TABLE IF EXISTS od_lid")
 
     i = 0
 #   while i < 1:
