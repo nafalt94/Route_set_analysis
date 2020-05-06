@@ -153,17 +153,17 @@ def main():
     tic()
 
     # Gamla lids
-    removed_lids = [83025, 84145, 83443, 82268, 82267]
+    #removed_lids = [83025, 84145, 83443, 82268, 82267]
     # Gröndalsbron
-    removed_lids = [82763, 83481]
-
+    #removed_lids = [82763, 83481]
+    removed_lids = [83481]
     #Gröndalsbron endast södergående
-    removed_lids = [82697, 82717]
+    #removed_lids = [82697, 82717]
 
     #Alla överfarter till södermalm
-    # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
-    #                 95360,95361,80922,83802,82323,82386,87551,89520,
-    #                 89519,91116,90016,90112,86516,93046,]
+    #removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
+                    # 95360,95361,80922,83802,82323,82386,87551,89520,
+                    # 89519,91116,90016,90112,86516,93046,]
 
     # cur_remote.execute("select start_zone from remote_results group by start_zone limit 10")
     # all_zones = cur_remote.fetchall()

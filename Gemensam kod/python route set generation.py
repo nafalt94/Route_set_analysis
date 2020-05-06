@@ -1300,7 +1300,7 @@ def main():
     cur.execute("UPDATE all_od_pairs SET status = -1")
     cur.execute("UPDATE all_od_pairs SET time_updated  = null")
 
-    print(str(routeSetGeneration(6980, 6781, my, threshold, max_overlap)))
+    print(str(routeSetGeneration(7544, 7901, my, threshold, max_overlap)))
     # fetch_update(my, threshold, max_overlap,100)
 
     start_zone = 7815
