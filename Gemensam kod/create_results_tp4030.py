@@ -153,12 +153,12 @@ def main():
     tic()
 
     # Gamla lids
-    #removed_lids = [83025, 84145, 83443, 82268, 82267]
+    # removed_lids = [83025, 84145, 83443, 82268, 82267]
     # Gröndalsbron
-    #removed_lids = [82763, 83481]
-    removed_lids = [83481]
+    # removed_lids = [82763, 83481]
+
     #Gröndalsbron endast södergående
-    #removed_lids = [82697, 82717]
+    removed_lids = [83481]
 
     #Alla överfarter till södermalm
     #removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
