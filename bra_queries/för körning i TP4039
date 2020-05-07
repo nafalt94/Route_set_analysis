@@ -56,3 +56,15 @@ from (select start_zone,end_zone, max(did) AS max_did
 #För att skapa nya partition-tabeller
 CREATE TABLE IF NOT EXISTS remote_results1(did INT, start_zone INT, end_zone INT, lid BIGINT,
 			link_cost DOUBLE PRECISION, path_seq INT, PRIMARY KEY (start_zone, end_zone,did, path_seq))
+
+
+
+#För att skapa "factor score"
+
+select *,mean_deterioration-1 as mean_det, CASE WHEN mean_deterioration = -1 and nr_affected > 0 THEN
+-1 
+ELSE cast(mean_deterioration-1 as float) * cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM
+emme_results_gotgatan) as float)  END as score
+from emme_results_gotgatan
+WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3
+GROUP BY origin, assigned_to HAVING count(*) > 1160) and mean_deterioration = -1 and nr_affected > 0 
