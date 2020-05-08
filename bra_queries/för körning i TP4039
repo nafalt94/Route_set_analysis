@@ -68,3 +68,11 @@ emme_results_gotgatan) as float)  END as score
 from emme_results_gotgatan
 WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3
 GROUP BY origin, assigned_to HAVING count(*) > 1160) and mean_deterioration = -1 and nr_affected > 0 
+
+
+#För att plocka ut omledningslids
+select lid, count(*) from (SELECT p.did, p.start_zone, p.end_zone,p.lid,p.link_cost, p.path_seq,geom FROM partitioned_results p
+left join model_graph on (model_graph.lid = p.lid)
+WHERE start_zone = 6840
+and (did ,end_zone) in (select distinct max(did)+1,end_zone from partitioned_results 
+			 where lid = 83481 and start_zone = 6840 group by end_zone)) b group by lid
