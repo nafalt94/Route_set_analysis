@@ -44,8 +44,8 @@ def affected_pairs(lids,tabel_nr):
     removed_lid_string += ")"
 
     # ORDER BY verkar ta tid. Att göra: indexera remote_results på start_zone
-    cur_remote.execute("select distinct start_zone,end_zone from remote_results_no_ferries" + str(tabel_nr) + " where "
-                       + removed_lid_string + " and did = 1 order by start_zone limit 100")
+    cur_remote.execute("select distinct start_zone,end_zone from remote_results" + str(tabel_nr) + " where "
+                       + removed_lid_string + " and did = 1 order by start_zone")
 
     all_pairs = cur_remote.fetchall()
     origins = [r[0] for r in all_pairs]
@@ -84,9 +84,9 @@ def add_to_table(list, lids, tabel_nr):
             print("Finished with " + str(round(i / np.size(list, 1), 2)) + " time: " + dt_string)
 
         cur_remote.execute(
-            "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results_no_ferries" + str(
+            "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid, did from remote_results" + str(
                 tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
-                " did NOT IN (select did from remote_results_no_ferries" + str(
+                " did NOT IN (select did from remote_results" + str(
                 tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
                 list[1][i]) + " AND " + removed_lid_string + ")")
 
@@ -141,7 +141,7 @@ def main():
     cur_remote.execute("SELECT update_order FROM insert_status WHERE mac = " + str(get_mac()))
     tabel_nr = cur_remote.fetchone()[0]
 
-    cur_remote.execute("DROP TABLE increasing_alternative"+str(tabel_nr))
+    cur_remote.execute("DROP TABLE if exists increasing_alternative"+str(tabel_nr))
 
     lists = affected_pairs(removed_lids, tabel_nr)
 

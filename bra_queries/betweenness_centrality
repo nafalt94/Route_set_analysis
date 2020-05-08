@@ -7,7 +7,7 @@ select betweenness_alldid.lid, betweenness_alldid.count, model_graph.geom into b
 
 -- Add betweeness calculations
 ALTER TABLE betweenness_centrality_alldids ADD COLUMN bc double precision;
-UPDATE betweenness_centrality SET bc = (cast(count as float)/cast(1105314 as float));
+UPDATE betweenness_centrality SET bc = (cast(count as float)/cast	(1105314 as float));
 
 analyze betweenness_centrality_alldids
 
