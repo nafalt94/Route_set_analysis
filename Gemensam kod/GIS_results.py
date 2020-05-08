@@ -58,7 +58,7 @@ def printRoutes(nr_routes):
 def fetchResults(emme_result,max_failed):
 
     ############################ Create layer for mean deterioration
-    sqlcall = "(SELECT * FROM "+str(emme_result)+" WHERE id NOT IN (SELECT origin FROM all_od_pairs_order " \
+    sqlcall = "(SELECT * FROM "+str(emme_result)+" WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit " \
               " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > "+str(max_failed)+" ))"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
@@ -88,7 +88,7 @@ def fetchResults(emme_result,max_failed):
 
     ############################ Create layer for nr_affected OD-pairs
     sqlcall = "(select *, cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM "+str(emme_result)+") as float) as prop_affected from "+str(emme_result)+"" \
-              " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order where status = 3 GROUP BY origin, assigned_to HAVING count(*) > "+str(max_failed)+") )"
+              " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > "+str(max_failed)+") )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
     layer = QgsVectorLayer(uri.uri(), "prop_affected ", "postgres")
@@ -112,6 +112,37 @@ def fetchResults(emme_result,max_failed):
 
     ## create the renderer and assign it to a layer
     expression = 'prop_affected'  # field name
+    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+
+    ############################ Create layer for "factor score"
+    sqlcall = "(select *, CASE WHEN mean_deterioration = -1 and nr_affected > 0 THEN " \
+              " -1 ELSE cast(mean_deterioration-1 as float) * cast(nr_affected as float)/cast((SELECT count(distinct zone) " \
+              " FROM " + str(emme_result) + ") as float)  END as factor_score from " + str(emme_result) + "" \
+                    " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > " + str(
+        max_failed) + ") )"
+    uri.setDataSource("", sqlcall, "geom", "", "id")
+
+    layer = QgsVectorLayer(uri.uri(), "factor_score ", "postgres")
+    QgsProject.instance().addMapLayer(layer)
+
+    values = (
+        ('0 affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
+        ('1 affected pairs', 0.00000000000000000000001, 0.05, QColor.fromRgb(102, 255, 102)),
+        ('1-5 affected pairs', 0.05, 0.2, QColor.fromRgb(255, 255, 153)),
+        ('5-10 affected pairs', 0.2, 0.4, QColor.fromRgb(255, 178, 102)),
+        ('10-many affected pairs', 0.4, 1, QColor.fromRgb(255, 102, 102)),
+    )
+
+    # create a category for each item in values
+    ranges = []
+    for label, lower, upper, color in values:
+        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
+        symbol.setColor(QColor(color))
+        rng = QgsRendererRange(lower, upper, symbol, label)
+        ranges.append(rng)
+
+    ## create the renderer and assign it to a layer
+    expression = 'factor_score'  # field name
     layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
 
 # DATABASE CONNECTION ------------------------------------------------------
