@@ -84,7 +84,7 @@ def add_to_table(list, lids, tabel_nr):
             print("Finished with " + str(round(i / np.size(list, 1), 2)) + " time: " + dt_string)
 
         cur_remote.execute(
-            "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid, did from remote_results" + str(
+            "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
                 tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
                 " did NOT IN (select did from remote_results" + str(
                 tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
