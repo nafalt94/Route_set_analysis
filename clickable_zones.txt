@@ -1,0 +1,99 @@
+import time
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtSql import *
+from PyQt5.QtWidgets import *
+from qgis.core import QgsFeature, QgsGeometry, QgsProject
+
+print(__name__)
+
+
+# Function definitions
+def TicTocGenerator():
+    # Generator that returns time differences
+    ti = 0  # initial time
+    tf = time.time()  # final time
+    while True:
+        ti = tf
+        tf = time.time()
+        yield tf - ti  # returns the time difference
+
+
+def toc(tempBool=True):
+    # Prints the time difference yielded by generator instance TicToc
+    tempTimeInterval = next(TicToc)
+    if tempBool:
+        print("Elapsed time: %f seconds.\n" % tempTimeInterval)
+
+
+def tic():
+    # Records a time in TicToc, marks the beginning of a time interval
+    toc(False)
+
+
+# Initialize TicToc function.
+TicToc = TicTocGenerator()
+
+# DATABASE CONNECTION ------------------------------------------------------
+uri = QgsDataSourceUri()
+# set host name, port, database name, username and password
+uri.setConnection("localhost", "5455", "mattugusna", "mattugusna", "password123")
+print(uri.uri())
+db = QSqlDatabase.addDatabase('QPSQL')
+
+if db.isValid():
+    print("QPSQL db is valid")
+    db.setHostName(uri.host())
+    db.setDatabaseName(uri.database())
+    db.setPort(int(uri.port()))
+    db.setUserName(uri.username())
+    db.setPassword(uri.password())
+    # open (create) the connection
+    if db.open():
+        print("Opened %s" % uri.uri())
+    else:
+        err = db.lastError()
+        print(err.driverText())
+
+
+# DATABASE CONNECTION COMPLETE ---------------------------------------------
+
+
+def main():
+    tic()
+    # removeRoutesLayers()
+
+    if db.isValid():
+        print("helloworld")
+        test_q = db.exec_("SELECT * FROM model_graph")
+        test_q.next()
+        print(str(test_q.value(4)))
+        
+        emme_result = "emme_results_hela_sodermalm"
+        max_failed = 1160
+        my_zone = [%id%]
+
+      ############################ Create layer for mean deterioration
+        sqlcall = "(select lid, count(*),geom from (SELECT p.did, p.start_zone, p.end_zone,p.lid,p.link_cost, p.path_seq,geom FROM partitioned_results p" \
+                  " left join model_graph on (model_graph.lid = p.lid) WHERE start_zone = "+str(my_zone)+"  " \
+                  " and (did ,end_zone) in (select distinct max(did)+1,end_zone from partitioned_results " \
+                  " where lid = 83481 and start_zone =  "+str(my_zone)+" group by end_zone)) b group by lid,geom)"
+        uri.setDataSource("", sqlcall, "geom", "", "lid")
+
+        layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
+        QgsProject.instance().addMapLayer(layer)
+
+
+            ## create the renderer and assign it to a layer
+        expression = 'count'  # field name
+        myRenderer = QgsGraduatedSymbolRenderer(expression)
+        myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
+        myRenderer.updateClasses(layer,QgsGraduatedSymbolRenderer.Jenks,5)
+        # using color ramp visspec
+        ramp = QgsCptCityColorRamp("cb/seq/YlOrRd_09", "", False, True)
+        #ramp = QgsGradientColorRamp.clone()
+        myRenderer.updateColorRamp(ramp)
+        layer.setRenderer(myRenderer)
+
+if __name__ == "__main__" or __name__ == "__console__":
+    main()
