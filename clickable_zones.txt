@@ -65,42 +65,49 @@ def main():
 
     if db.isValid():
         print("helloworld")
-        
+
         my_zone = [%id%]
-        
-    # Gröndalsbron
-    # removed_lids = [82763, 83481]
 
-    #Gröndalsbron endast södergående
-    #removed_lids = [83481]
+        # Gröndalsbron
+        # removed_lids = [82763, 83481]
 
-    #Alla överfarter till södermalm
-    removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
-                    95360,95361,80922,83802,82323,82386,87551,89520,
-                    89519,91116,90016,90112,86516,93046,]
-        
+        # Gröndalsbron endast södergående
+        #removed_lids = [83481]
 
-      ############################ Create layer for mean deterioration
+        # Alla överfarter till södermalm
+        removed_lids = [82587, 83042, 87369, 89102, 91089, 94139, 94140,
+                         95360, 95361, 80922, 83802, 82323, 82386, 87551, 89520,
+                         89519, 91116, 90016, 90112, 86516, 93046, ]
+
+        # Create string of chosen lids to analyse
+        removed_lid_string = "( lid = " + str(removed_lids[0])
+        i = 1
+        while i < len(removed_lids):
+            removed_lid_string += " or lid =" + str(removed_lids[i])
+            i += 1
+        removed_lid_string += ")"
+
+        ############################ Create layer
         sqlcall = "(select lid, count(*),geom from (SELECT p.did, p.start_zone, p.end_zone,p.lid,p.link_cost, p.path_seq,geom FROM partitioned_results p" \
-                  " left join model_graph on (model_graph.lid = p.lid) WHERE start_zone = "+str(my_zone)+"  " \
-                  " and (did ,end_zone) in (select distinct max(did)+1,end_zone from partitioned_results " \
-                  " where lid = 83481 and start_zone =  "+str(my_zone)+" group by end_zone)) b group by lid,geom)"
+                  " left join model_graph on (model_graph.lid = p.lid) WHERE start_zone = " + str(my_zone) + "  " \
+                        " and (did ,end_zone) in (select distinct max(did)+1,end_zone from partitioned_results  where "+str(removed_lid_string)+" and start_zone =  " + str(
+            my_zone) + " group by end_zone)) b group by lid,geom)"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
 
         layer = QgsVectorLayer(uri.uri(), str(my_zone), "postgres")
         QgsProject.instance().addMapLayer(layer)
 
-
-            ## create the renderer and assign it to a layer
+        ## create the renderer and assign it to a layer
         expression = 'count'  # field name
         myRenderer = QgsGraduatedSymbolRenderer(expression)
         myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
-        myRenderer.updateClasses(layer,QgsGraduatedSymbolRenderer.Jenks,5)
+        myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
         # using color ramp visspec
         ramp = QgsCptCityColorRamp("cb/seq/YlOrRd_09", "", False, True)
-        #ramp = QgsGradientColorRamp.clone()
+        # ramp = QgsGradientColorRamp.clone()
         myRenderer.updateColorRamp(ramp)
         layer.setRenderer(myRenderer)
+
 
 if __name__ == "__main__" or __name__ == "__console__":
     main()
