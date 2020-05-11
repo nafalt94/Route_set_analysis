@@ -65,13 +65,20 @@ def main():
 
     if db.isValid():
         print("helloworld")
-        test_q = db.exec_("SELECT * FROM model_graph")
-        test_q.next()
-        print(str(test_q.value(4)))
         
-        emme_result = "emme_results_hela_sodermalm"
-        max_failed = 1160
         my_zone = [%id%]
+        
+    # Gröndalsbron
+    # removed_lids = [82763, 83481]
+
+    #Gröndalsbron endast södergående
+    #removed_lids = [83481]
+
+    #Alla överfarter till södermalm
+    removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
+                    95360,95361,80922,83802,82323,82386,87551,89520,
+                    89519,91116,90016,90112,86516,93046,]
+        
 
       ############################ Create layer for mean deterioration
         sqlcall = "(select lid, count(*),geom from (SELECT p.did, p.start_zone, p.end_zone,p.lid,p.link_cost, p.path_seq,geom FROM partitioned_results p" \
@@ -80,7 +87,7 @@ def main():
                   " where lid = 83481 and start_zone =  "+str(my_zone)+" group by end_zone)) b group by lid,geom)"
         uri.setDataSource("", sqlcall, "geom", "", "lid")
 
-        layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
+        layer = QgsVectorLayer(uri.uri(), str(my_zone), "postgres")
         QgsProject.instance().addMapLayer(layer)
 
 
