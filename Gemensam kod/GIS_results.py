@@ -40,7 +40,7 @@ def removeRoutesLayers():
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
             layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid"\
                 and str(layer.name()) != "Link used by 3 shortest paths" and str(layer.name()) != "Link used by 0 shortest paths"\
-                and str(layer.name()) != "OD_pairs" and str(layer.name()) != "failed_start_zones":
+                and str(layer.name()) != "OD_pairs" and str(layer.name()) != "failed_start_zones" and str(layer.name()) != "clickable":
             QgsProject.instance().removeMapLayer(layer.id())
 
 #Vet inte om dessa två behövs..
@@ -65,26 +65,16 @@ def fetchResults(emme_result,max_failed):
     layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
-    values = (
-        ('No deterioration', 0, 0, QColor.fromRgb(153, 204, 255)),
-        ('Mean deterioration 1-5% ', 1, 1.05, QColor.fromRgb(102, 255, 102)),
-        ('Mean deterioration 5-10% ', 1.05, 1.1, QColor.fromRgb(255, 255, 153)),
-        ('Mean deterioration 10-20% ', 1.1, 1.2, QColor.fromRgb(255, 178, 102)),
-        ('Mean deterioration 20-30% ', 1.2, 1.3, QColor.fromRgb(255, 102, 102)),
-        ('All routes affected ', -1, -1, QColor.fromRgb(0, 0, 0)),
-    )
-
-    # create a category for each item in values
-    ranges = []
-    for label, lower, upper, color in values:
-        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-        symbol.setColor(QColor(color))
-        rng = QgsRendererRange(lower, upper, symbol, label)
-        ranges.append(rng)
-
     ## create the renderer and assign it to a layer
     expression = 'mean_deterioration'  # field name
-    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+    myRenderer = QgsGraduatedSymbolRenderer(expression)
+    myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
+    myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
+    # using color ramp visspec
+    ramp = QgsCptCityColorRamp("cb/seq/Blues_09", "", False, True)
+    # ramp = QgsGradientColorRamp.clone()
+    myRenderer.updateColorRamp(ramp)
+    layer.setRenderer(myRenderer)
 
     ############################ Create layer for nr_affected OD-pairs
     sqlcall = "(select *, cast(nr_affected as float)/cast((SELECT count(distinct zone) FROM "+str(emme_result)+") as float) as prop_affected from "+str(emme_result)+"" \
@@ -94,25 +84,16 @@ def fetchResults(emme_result,max_failed):
     layer = QgsVectorLayer(uri.uri(), "prop_affected ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
-    values = (
-        ('0 affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
-        ('1 affected pairs', 0.00000000000000000000001, 0.05, QColor.fromRgb(102, 255, 102)),
-        ('1-5 affected pairs', 0.05, 0.2, QColor.fromRgb(255, 255, 153)),
-        ('5-10 affected pairs', 0.2, 0.4, QColor.fromRgb(255, 178, 102)),
-        ('10-many affected pairs', 0.4, 1, QColor.fromRgb(255, 102, 102)),
-    )
-
-    # create a category for each item in values
-    ranges = []
-    for label, lower, upper, color in values:
-        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-        symbol.setColor(QColor(color))
-        rng = QgsRendererRange(lower, upper, symbol, label)
-        ranges.append(rng)
-
     ## create the renderer and assign it to a layer
     expression = 'prop_affected'  # field name
-    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+    myRenderer = QgsGraduatedSymbolRenderer(expression)
+    myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
+    myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
+    # using color ramp visspec
+    ramp = QgsCptCityColorRamp("cb/seq/Blues_09", "", False, True)
+    # ramp = QgsGradientColorRamp.clone()
+    myRenderer.updateColorRamp(ramp)
+    layer.setRenderer(myRenderer)
 
     ############################ Create layer for "factor score"
     sqlcall = "(select *, CASE WHEN mean_deterioration = -1 and nr_affected > 0 THEN " \
@@ -125,29 +106,21 @@ def fetchResults(emme_result,max_failed):
     layer = QgsVectorLayer(uri.uri(), "factor_score ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
-    values = (
-        ('0 affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
-        ('1 affected pairs', 0.00000000000000000000001, 0.05, QColor.fromRgb(102, 255, 102)),
-        ('1-5 affected pairs', 0.05, 0.2, QColor.fromRgb(255, 255, 153)),
-        ('5-10 affected pairs', 0.2, 0.4, QColor.fromRgb(255, 178, 102)),
-        ('10-many affected pairs', 0.4, 1, QColor.fromRgb(255, 102, 102)),
-    )
-
-    # create a category for each item in values
-    ranges = []
-    for label, lower, upper, color in values:
-        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-        symbol.setColor(QColor(color))
-        rng = QgsRendererRange(lower, upper, symbol, label)
-        ranges.append(rng)
-
     ## create the renderer and assign it to a layer
     expression = 'factor_score'  # field name
-    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+    myRenderer = QgsGraduatedSymbolRenderer(expression)
+    myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
+    myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
+    # using color ramp visspec
+    ramp = QgsCptCityColorRamp("cb/seq/Greens_09", "", False, True)
+    # ramp = QgsGradientColorRamp.clone()
+    myRenderer.updateColorRamp(ramp)
+    layer.setRenderer(myRenderer)
+
 
     ############################ Create layer for redirection zones
     sqlcall = "(select *, CASE WHEN mean_deterioration = -1 and nr_affected > 0 THEN " \
-              " -1 ELSE  (1-cast(mean_deterioration-1 as float))^8* cast(nr_affected as float)/cast((SELECT count(distinct zone) " \
+              " -1 ELSE  (1-cast(mean_deterioration-1 as float))^10* cast(nr_affected as float)/cast((SELECT count(distinct zone) " \
               " FROM " + str(emme_result) + ") as float)  END as factor_score_invers from " + str(emme_result) + "" \
                                                                                                           " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > " + str(
         max_failed) + ") )"
@@ -156,25 +129,16 @@ def fetchResults(emme_result,max_failed):
     layer = QgsVectorLayer(uri.uri(), "factor_score_invers", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
-    values = (
-        ('0 affected pairs', 0, 0, QColor.fromRgb(153, 204, 255)),
-        ('1 affected pairs', 0.00000000000000000000001, 0.05, QColor.fromRgb(102, 255, 102)),
-        ('1-5 affected pairs', 0.05, 0.2, QColor.fromRgb(255, 255, 153)),
-        ('5-10 affected pairs', 0.2, 0.4, QColor.fromRgb(255, 178, 102)),
-        ('10-many affected pairs', 0.4, 1, QColor.fromRgb(255, 102, 102)),
-    )
-
-    # create a category for each item in values
-    ranges = []
-    for label, lower, upper, color in values:
-        symbol = QgsSymbol.defaultSymbol(layer.geometryType())
-        symbol.setColor(QColor(color))
-        rng = QgsRendererRange(lower, upper, symbol, label)
-        ranges.append(rng)
-
     ## create the renderer and assign it to a layer
     expression = 'factor_score_invers'  # field name
-    layer.setRenderer(QgsGraduatedSymbolRenderer(expression, ranges))
+    myRenderer = QgsGraduatedSymbolRenderer(expression)
+    myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
+    myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
+    # using color ramp visspec
+    ramp = QgsCptCityColorRamp("cb/seq/Blues_09", "", False, True)
+    # ramp = QgsGradientColorRamp.clone()
+    myRenderer.updateColorRamp(ramp)
+    layer.setRenderer(myRenderer)
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
