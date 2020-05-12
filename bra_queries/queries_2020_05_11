@@ -1,0 +1,20 @@
+select lid, count(*) from (SELECT p.did, p.start_zone, p.end_zone,p.lid,p.link_cost, p.path_seq FROM partitioned_results p
+ WHERE start_zone = 6840
+ and (did ,end_zone) in (select distinct max(did)+1,end_zone from partitioned_results
+              where lid = 83481 and start_zone = 6840 group by end_zone)) b group by lid
+			  
+select distinct start_zone,end_zone from remote_results1 where lid = 83481 and did = 1 order by start_zone
+			  
+DROP TABLE if exists increasing_alternative1
+
+CREATE TABLE if not exists increasing_alternative1(lid BIGINT, count BIGINT, PRIMARY KEY(lid))
+
+6772
+6840
+
+
+select * from increasing_alternative	  
+1935
+select * from alternative_increase_essinge_soder
+SELECT distinct lid from increasing_alternative1
+select increasing_alternative1.lid, count, model_graph.geom from increasing_alternative1 INNER JOIN model_graph ON(increasing_alternative1.lid = model_graph.lid)
