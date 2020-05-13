@@ -62,16 +62,15 @@ def fetchResults(emme_result,max_failed):
               " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > "+str(max_failed)+" ))"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "mean_deterioration ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "Mean deterioration ", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     ## create the renderer and assign it to a layer
     expression = 'mean_deterioration'  # field name
     myRenderer = QgsGraduatedSymbolRenderer(expression)
-    myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
     myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
     # using color ramp visspec
-    ramp = QgsCptCityColorRamp("cb/seq/Blues_09", "", False, True)
+    ramp = QgsCptCityColorRamp("cb/seq/Reds_06", "", False, True)
     # ramp = QgsGradientColorRamp.clone()
     myRenderer.updateColorRamp(ramp)
     layer.setRenderer(myRenderer)
@@ -81,7 +80,7 @@ def fetchResults(emme_result,max_failed):
               " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > "+str(max_failed)+") )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "prop_affected ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "Proportion of affected destinations", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     ## create the renderer and assign it to a layer
@@ -103,7 +102,7 @@ def fetchResults(emme_result,max_failed):
         max_failed) + ") )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "factor_score ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "Proportion of affected destinations * Mean deterioration", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     ## create the renderer and assign it to a layer
@@ -112,7 +111,7 @@ def fetchResults(emme_result,max_failed):
     myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
     myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
     # using color ramp visspec
-    ramp = QgsCptCityColorRamp("cb/seq/Greens_09", "", False, True)
+    ramp = QgsCptCityColorRamp("cb/seq/Purples_06", "", False, True)
     # ramp = QgsGradientColorRamp.clone()
     myRenderer.updateColorRamp(ramp)
     layer.setRenderer(myRenderer)
@@ -120,13 +119,13 @@ def fetchResults(emme_result,max_failed):
 
     ############################ Create layer for redirection zones
     sqlcall = "(select *, CASE WHEN mean_deterioration = -1 and nr_affected > 0 THEN " \
-              " -1 ELSE  (1-cast(mean_deterioration-1 as float))^10* cast(nr_affected as float)/cast((SELECT count(distinct zone) " \
-              " FROM " + str(emme_result) + ") as float)  END as factor_score_invers from " + str(emme_result) + "" \
-                                                                                                          " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > " + str(
+              " -1 ELSE cast(nr_affected as float)/cast((SELECT count(distinct zone) " \
+              " FROM " + str(emme_result) + ") as float)/(1-cast(mean_deterioration-1 as float))  END as factor_score_invers from " + str(emme_result) + "" \
+               " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > " + str(
         max_failed) + ") )"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "factor_score_invers", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "High prop, low mean det", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     ## create the renderer and assign it to a layer
@@ -134,9 +133,7 @@ def fetchResults(emme_result,max_failed):
     myRenderer = QgsGraduatedSymbolRenderer(expression)
     myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
     myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
-    # using color ramp visspec
-    ramp = QgsCptCityColorRamp("cb/seq/Blues_09", "", False, True)
-    # ramp = QgsGradientColorRamp.clone()
+    ramp = QgsCptCityColorRamp("cb/seq/Greens_09", "", False, True)
     myRenderer.updateColorRamp(ramp)
     layer.setRenderer(myRenderer)
 

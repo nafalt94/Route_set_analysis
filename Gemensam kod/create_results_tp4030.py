@@ -78,6 +78,10 @@ def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
                 mean_det = -1
             else:
                 mean_det = sum/count
+
+            #För att inkludera nollor..
+            mean_det = sum / 1181
+
             # result is: [nr all routes affected,mean_deterioration,nr affected OD-pairs]
             result = [sum_all_affected,mean_det,(count + sum_all_affected)]
             cur_remote.execute("UPDATE emme_results SET nr_all_routes_affected = " + str(result[0]) + " , mean_deterioration = " +
@@ -142,9 +146,9 @@ def affected_pairs(lids,tabel_nr):
 
 # Connection global to be used everywhere.
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
@@ -155,15 +159,15 @@ def main():
     # Gamla lids
     # removed_lids = [83025, 84145, 83443, 82268, 82267]
     # Gröndalsbron
-    # removed_lids = [82763, 83481]
+    removed_lids = [82763, 83481]
 
     #Gröndalsbron endast södergående
     #removed_lids = [83481]
 
     #Alla överfarter till södermalm
-    removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
-                    95360,95361,80922,83802,82323,82386,87551,89520,
-                    89519,91116,90016,90112,86516,93046,]
+    # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
+    #                 95360,95361,80922,83802,82323,82386,87551,89520,
+    #                 89519,91116,90016,90112,86516,93046,]
 
     # cur_remote.execute("select start_zone from remote_results group by start_zone limit 10")
     # all_zones = cur_remote.fetchall()
