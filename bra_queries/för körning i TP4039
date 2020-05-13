@@ -44,7 +44,7 @@ select origin,assigned_to, count(*) as cnt,geom from all_od_pairs_order
 	group by origin, assigned_to,geom
 
 #Nollställa emme_results
-UPDATE emme_results SET nr_all_routes_affected = 0, mean_deterioration = 0, nr_affected = 0
+UPDATE emme_results SET nr_all_routes_affected = 0, mean_deterioration = 0, nr_affected = 0, mean_deterioration_all = 0
 
 
 #Avgerage antal rutter
