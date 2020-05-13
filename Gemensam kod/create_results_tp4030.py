@@ -80,12 +80,13 @@ def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
                 mean_det = sum/count
 
             #För att inkludera nollor..
-            mean_det = sum / 1181
+            #1125 is the number of distinct end_zones
+            mean_det_all = sum / 1125
 
             # result is: [nr all routes affected,mean_deterioration,nr affected OD-pairs]
-            result = [sum_all_affected,mean_det,(count + sum_all_affected)]
+            result = [sum_all_affected,mean_det,mean_det_all,(count + sum_all_affected)]
             cur_remote.execute("UPDATE emme_results SET nr_all_routes_affected = " + str(result[0]) + " , mean_deterioration = " +
-                str(result[1]) + ",nr_affected = " + str(result[2]) + "  WHERE id = " + str(origins[i]) + ";")
+                str(result[1]) + ", mean_deterioration_all = " +str(result[2]) + ", nr_affected = " + str(result[3]) + "  WHERE id = " + str(origins[i]) + ";")
             sum = 0
             sum_all_affected = 0
             count = 0
@@ -146,9 +147,9 @@ def affected_pairs(lids,tabel_nr):
 
 # Connection global to be used everywhere.
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
