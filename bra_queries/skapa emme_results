@@ -7,3 +7,8 @@ create index id_idx on emme_results (id)
 # Nyare varianten (skapar alla som finns i partitioned results).
 SELECT 0 as nr_all_routes_affected, 0.0 
                        as mean_deterioration, 0 as nr_affected,* INTO emme_results FROM (select distinct start_zone from partitioned_results ) b inner join emme_zones ON (start_zone = id)
+                       
+                       
+                       #nyny som har mean_det_all också 
+                       SELECT 0 as nr_all_routes_affected, 0.0 as mean_deterioration, 0.0 as mean_deterioration_all, 0 as nr_affected,* INTO emme_results 
+FROM (select distinct start_zone from partitioned_results ) b inner join emme_zones ON (start_zone = id)
