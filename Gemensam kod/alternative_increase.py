@@ -83,6 +83,7 @@ def add_to_table(list, lids, tabel_nr):
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
             print("Finished with " + str(round(i / np.size(list, 1), 2)) + " time: " + dt_string)
 
+        # För alla alternativa rutter
         cur_remote.execute(
             "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
                 tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
@@ -90,6 +91,78 @@ def add_to_table(list, lids, tabel_nr):
                 tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
                 list[1][i]) + " AND " + removed_lid_string + ")")
 
+        # För näst bästa alternativet som inte använder removed lids.
+        # cur_remote.execute(
+        #         "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
+        #             tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
+        #             " did NOT IN (select did from remote_results" + str(
+        #             tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
+        #             list[1][i]) + " AND " + removed_lid_string + ")")
+
+        i += 1
+
+    print("Klar med add to table i är:"+ str(i))
+
+
+def affected_pairs_start_zone(lids):
+
+    #Create string of chosen lids to analyse
+    removed_lid_string = "( lid = " + str(lids[0])
+    i = 1
+    while i < len(lids):
+        removed_lid_string += " or lid =" + str(lids[i])
+        i += 1
+    removed_lid_string += ")"
+
+    # ORDER BY verkar ta tid. Att göra: indexera remote_results på start_zone
+    cur_remote.execute("select distinct start_zone from partitioned_results where "
+                       + removed_lid_string + " and did = 1 order by start_zone")
+
+    all_pairs = cur_remote.fetchall()
+    origins = [r[0] for r in all_pairs]
+
+    return [origins]
+
+
+
+def add_to_table_start_zone(list, lids):
+
+    cur_remote.execute("CREATE TABLE if not exists increasing_alternative(lid BIGINT, count BIGINT, PRIMARY KEY(lid))")
+    # Create string of chosen lids to analyse
+    removed_lid_string = "( lid = " + str(lids[0])
+    i = 1
+    while i < len(lids):
+        removed_lid_string += " or lid =" + str(lids[i])
+        i += 1
+    removed_lid_string += ")"
+
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    print("Insert börjar " + dt_string)
+    i=0
+    print_count = 1
+    while i < np.size(list, 1):
+        if i == round(print_count * np.size(list, 1) / 10):
+            print_count += 1
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print("Finished with " + str(round(i / np.size(list, 1), 2)) + " time: " + dt_string)
+
+        # För alla alternativa rutter
+        # cur_remote.execute(
+        #     "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
+        #         tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
+        #         " did NOT IN (select did from remote_results" + str(
+        #         tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
+        #         list[1][i]) + " AND " + removed_lid_string + ")")
+
+        # För näst bästa alternativet som inte använder removed lids.
+        cur_remote.execute("INSERT INTO increasing_alternative select lid, count(*) from "
+        "(SELECT p.did, p.start_zone, p.end_zone, p.lid, p.link_cost, p.path_seq "
+        "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
+        "and (did, end_zone) in (select distinct max(did) + 1, end_zone "
+        "from partitioned_results where " + removed_lid_string + " and start_zone = " + str(list[0][i]) + " group by "
+        "end_zone)) b group by lid ON CONFLICT(lid) DO UPDATE SET count = excluded.count + increasing_alternative.count")
 
         i += 1
 
@@ -109,10 +182,10 @@ def add_to_table(list, lids, tabel_nr):
 
 # Connection global to be used everywhere.
 #TP4030
-conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 
 #Gustav och Mattias
-#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
@@ -127,28 +200,29 @@ def main():
     #removed_lids = [82697, 82717]
 
     #Alla överfarter till södermalm
-    #removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
-                    # 95360,95361,80922,83802,82323,82386,87551,89520,
-                    # 89519,91116,90016,90112,86516,93046,]
+    # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
+    #                 95360,95361,80922,83802,82323,82386,87551,89520,
+    #                 89519,91116,90016,90112,86516,93046,]
 
+    removed_lids = [91116, 87551, 92885, 93752, 94922, 81082, 91081, 89227, 89228, 88721, 88720, 89385, 89384,89387]
     # print(str(odEffect(7789, 7251, [83443, 84145])))
     # print(str(odEffect(6772, 6773, [83443, 84145])))
 
-    removed_lids = [83481]
+    # removed_lids = [83481]
 
     print("Mac: ", get_mac())
     #För att ta reda på vilken tabell som ska arbetas med:
-    cur_remote.execute("SELECT update_order FROM insert_status WHERE mac = " + str(get_mac()))
-    tabel_nr = cur_remote.fetchone()[0]
+    # cur_remote.execute("SELECT update_order FROM insert_status WHERE mac = " + str(get_mac()))
+    # tabel_nr = cur_remote.fetchone()[0]
+    # tabel_nr = 1
+    cur_remote.execute("DROP TABLE if exists increasing_alternative")
 
-    cur_remote.execute("DROP TABLE if exists increasing_alternative"+str(tabel_nr))
+    lists = affected_pairs_start_zone(removed_lids)
 
-    lists = affected_pairs(removed_lids, tabel_nr)
 
-    print("Tabell nr:" + str(tabel_nr))
-    print("number of od-pairs: " + str(np.size(lists,1)))
+    print("Number of start zones effected " + str(np.size(lists,1)))
 
-    add_to_table(lists, removed_lids, tabel_nr)
+    add_to_table_start_zone(lists, removed_lids)
 
     #print(str(affected_pairs(removed_lids)[0]))
     toc()

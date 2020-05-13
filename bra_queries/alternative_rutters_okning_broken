@@ -1,0 +1,6 @@
+SELECT geom, a.lid, count(a.lid) from (select * from partitioned_results WHERE (start_zone, end_zone) 
+in (select distinct start_zone, end_zone from partitioned_results where lid = 83481 and did = 1 and 
+start_zone = 6840) ) a INNER JOIN model_graph ON(a.lid=model_graph.lid) WHERE did NOT IN 
+(select did from partitioned_results where start_zone = 6840 AND end_zone in ( select distinct end_zone 
+from partitioned_results where lid = 83481 and did = 1 and start_zone = 6840) and did = 1 AND lid = 83481) 
+group by a.lid, geom ) 
