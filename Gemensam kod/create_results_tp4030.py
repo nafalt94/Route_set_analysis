@@ -166,7 +166,10 @@ def main():
     # removed_lids = [83481]
 
     #Tranebergsbron
-    removed_lids = [82697,82717]
+    #removed_lids = [82697,82717]
+
+    #Götgatan
+    removed_lids = [91116, 87551, 92885, 93752, 94922, 81082, 91081, 89227, 89228, 88721, 88720, 89385, 89384, 89387]
 
     #Alla överfarter till södermalm
     # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,

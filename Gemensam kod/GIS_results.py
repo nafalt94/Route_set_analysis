@@ -81,7 +81,7 @@ def fetchResults(emme_result,max_failed):
                        " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > " + str(max_failed) + " ))"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "Mean deterioration all ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "Mean deterioration", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     ## create the renderer and assign it to a layer
@@ -149,7 +149,7 @@ def main():
         max_failed = 1160
 
         emme_result = "emme_results_grondals_soder"
-        emme_result = "emme_results"
+        emme_result = "emme_results_grondals"
 
         # Variable definitions
         fetchResults(emme_result,max_failed)
