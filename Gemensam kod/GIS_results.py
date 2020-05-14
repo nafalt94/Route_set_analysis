@@ -149,7 +149,8 @@ def main():
         max_failed = 1160
 
         emme_result = "emme_results_grondals_soder"
-        emme_result = "emme_results_grondals"
+        emme_result = "emme_results_tranebergsbron"
+        emme_result = "emme_results_gotgatan"
 
         # Variable definitions
         fetchResults(emme_result,max_failed)
