@@ -44,7 +44,9 @@ def removeRoutesLayers():
 
     for layer_id, layer in layers.items():
         if str(layer.name()) != "model_graph" and str(layer.name()) != "emme_zones" and str(layer.name()) != "labels" \
-                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table":
+                and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(layer.name()) \
+                != "Centroider" and str(layer.name()) != "betweenness" and str(layer.name()) != "result_impairment" \
+                and str(layer.name()) != "lid_soderleden" and str(layer.name()) != "lid_essingeleden" :
             QgsProject.instance().removeMapLayer(layer.id())
 
 # Give a zone id get a node id
@@ -491,20 +493,26 @@ def main():
 
         start_list = [6904, 6884, 6869, 6887, 6954, 7317, 7304, 7541]
         end_list = [6837, 6776, 7642, 7630, 7878, 6953, 7182, 7609]
+
+        start_list = [6884,6904, 6922]
+        end_list = [7877, 6837, 7630]
+
         list = [6904, 6884,6837, 6776, 7835, 7864, 7967]
+        list = [8005, 7195, 6884, 6837, 6776, 7835, 7864, 6955, 7570, 7422, 7680, 7557, 7560, 6879, 6816, 7630, 7162,
+                7187, 7227]
         removed_lid = 89227 #Götgatan
-        removed_lid = 83025  # Söderledstunneln
+        removed_lid = [83025,82386]  #Söderledstunneln
         removed_lids = [83025, 84145, 222223333]
 
-        #selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
-        #allToAllResultTable(list,my,threshold)
-        allToAll(list,removed_lids)
+        selectedODResultTable(start_list, end_list,my,threshold,removed_lid)
+        # allToAllResultTable(list,my,threshold)
+        # allToAll(list,removed_lids)
         #___________________________________________________________________________________________________________________
 
         # Generating a single route set
 
-        # start_zone = 6785
-        # end_zone = 7405
+        # start_zone = 6904
+        # end_zone = 6837
         #
         # nr_routes = routeSetGeneration(start_zone, end_zone, my, threshold)
         # printRoutes(nr_routes)
