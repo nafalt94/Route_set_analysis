@@ -63,12 +63,15 @@ def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
             print("Finished with " + str(100*i / len(origins)) + "% kl: " + dt_string)
 
-        effect = odEffect(origins[i], destinations[i], removed_lid_string,tabel_nr)
-        if effect != -1:
-            sum += effect
-            count += 1
-        else:
-            sum_all_affected += 1
+        # effect = odEffect(origins[i], destinations[i], removed_lid_string,tabel_nr)
+        # if effect != -1:
+        #     sum += effect
+        #     count += 1
+        # else:
+        #     sum_all_affected += 1
+
+        sum_all_affected += 1
+
 
         #if last iteration, terminate and if last pair of current start_zone, update and go to next
         if (i == len(origins) - 1) or (origins[i] != origins[i + 1]):
@@ -160,7 +163,7 @@ def main():
     # Gamla lids
     # removed_lids = [83025, 84145, 83443, 82268, 82267]
     # Gröndalsbron
-    #removed_lids = [82763, 83481]
+    removed_lids = [82763, 83481]
 
     #Gröndalsbron endast södergående
     # removed_lids = [83481]
@@ -172,7 +175,7 @@ def main():
     #removed_lids = [91116, 87551, 92885, 93752, 94922, 81082, 91081, 89227, 89228, 88721, 88720, 89385, 89384, 89387]
 
     #Götgatan mitt på vägen
-    removed_lids = [89227, 89228,88721, 88720]
+    #removed_lids = [89227, 89228]
 
     #Alla överfarter till södermalm
     # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,

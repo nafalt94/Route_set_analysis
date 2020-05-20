@@ -40,7 +40,8 @@ def removeRoutesLayers():
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
             layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid"\
                 and str(layer.name()) != "Link used by 3 shortest paths" and str(layer.name()) != "Link used by 0 shortest paths"\
-                and str(layer.name()) != "OD_pairs" and str(layer.name()) != "failed_start_zones" and str(layer.name()) != "clickable":
+                and str(layer.name()) != "OD_pairs" and str(layer.name()) != "failed_start_zones" and str(layer.name()) != "clickable" \
+                and str(layer.name()) != "betweenness":
             QgsProject.instance().removeMapLayer(layer.id())
 
 #Vet inte om dessa två behövs..
@@ -148,9 +149,11 @@ def main():
         #Max allowed # of failing OD-pairs for zone to be included in analysis
         max_failed = 1160
 
-        emme_result = "emme_results_grondals_soder"
+
         emme_result = "emme_results_tranebergsbron"
         emme_result = "emme_results_gotgatan"
+        emme_result = "emme_results"
+        emme_result = "emme_results_grondals_endast_soder"
 
         # Variable definitions
         fetchResults(emme_result,max_failed)
