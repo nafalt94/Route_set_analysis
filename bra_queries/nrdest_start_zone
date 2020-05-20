@@ -1,0 +1,2 @@
+-- Get all destination of every  start_zone in partitioned_results
+select start_zone, count(start_zone) from (select distinct start_zone, end_zone from partitioned_results) a group by start_zone

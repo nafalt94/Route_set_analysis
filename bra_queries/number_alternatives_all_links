@@ -1,0 +1,20 @@
+Tranebergsbron nr_alternative = 110056
+Götgatan nr_alternative = 14739
+Gröndalsbron nr_alternative = 266588
+Gröndalsbron söder = 135993
+
+Götgatan klick 7611 = 14
+Tranebergsbron klick 6902 =  90
+Gröndalsbron klick 7593 = 301
+South Gröndalsbron klick 7662 = 321
+
+select increasing_alternative_gotgatan_v2.lid, CAST(count as float)/203359 as proportion , 
+model_graph.geom from increasing_alternative_gotgatan_v2 INNER JOIN model_graph 
+ON(increasing_alternative_gotgatan_v2.lid = model_graph.lid)
+
+-- köra alla alternativ
+SELECT distinct p.start_zone, p.end_zone, p.did
+                           FROM partitioned_results p WHERE start_zone = 7081
+                            and (did, end_zone) in (select distinct max(did) + 1 , end_zone
+                            from partitioned_results where  (lid = 82763 or lid = 83481) and start_zone = 7081
+													group by end_zone)

@@ -127,7 +127,11 @@ def affected_pairs_start_zone(lids):
 
 def add_to_table_start_zone(list, lids):
 
-    cur_remote.execute("CREATE TABLE if not exists increasing_alternative(lid BIGINT, count BIGINT, PRIMARY KEY(lid))")
+
+    #cur_remote.execute("CREATE TABLE if not exists increasing_alternative(lid BIGINT, count BIGINT, PRIMARY KEY(lid))")
+
+    # Test med count
+    cur_remote.execute("CREATE TABLE if not exists increasing_alternative(start_zone BIGINT)")
     # Create string of chosen lids to analyse
     removed_lid_string = "( lid = " + str(lids[0])
     i = 1
@@ -157,12 +161,21 @@ def add_to_table_start_zone(list, lids):
         #         list[1][i]) + " AND " + removed_lid_string + ")")
 
         # För näst bästa alternativet som inte använder removed lids.
-        cur_remote.execute("INSERT INTO increasing_alternative select lid, count(*) from "
-        "(SELECT p.did, p.start_zone, p.end_zone, p.lid, p.link_cost, p.path_seq "
-        "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
-        "and (did, end_zone) in (select distinct max(did) + 1, end_zone "
-        "from partitioned_results where " + removed_lid_string + " and start_zone = " + str(list[0][i]) + " group by "
-        "end_zone)) b group by lid ON CONFLICT(lid) DO UPDATE SET count = excluded.count + increasing_alternative.count")
+        # cur_remote.execute("INSERT INTO increasing_alternative select lid, count(*) from "
+        # "(SELECT p.did, p.start_zone, p.end_zone, p.lid, p.link_cost, p.path_seq "
+        # "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
+        # "and (did, end_zone) in (select distinct max(did) + 1, end_zone "
+        # "from partitioned_results where " + removed_lid_string + " and start_zone = " + str(list[0][i]) + " group by "
+        # "end_zone)) b group by lid ON CONFLICT(lid) DO UPDATE SET count = excluded.count + increasing_alternative.count")
+
+        # TEST MED räkna start zoner
+        cur_remote.execute("INSERT INTO increasing_alternative select end_zone from "
+                           "(SELECT distinct p.start_zone, p.end_zone, p.did "
+                           "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
+                            "and (did, end_zone) in (select distinct max(did) + 1 , end_zone "
+                            "from partitioned_results where  "+removed_lid_string+" and start_zone = " + str(list[0][i]) + " "
+													"group by end_zone)) b")
+
 
         i += 1
 
@@ -192,23 +205,23 @@ cur_remote = conn_remote.cursor()
 
 def main():
     tic()
-
-    # Gamla lids
-    #removed_lids = [83025, 84145, 83443, 82268, 82267]
     # Gröndalsbron
-    #removed_lids = [82763, 83481]
-    #removed_lids = [82697, 82717]
+    removed_lids = [82763, 83481]
 
     #Alla överfarter till södermalm
     # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
     #                 95360,95361,80922,83802,82323,82386,87551,89520,
     #                 89519,91116,90016,90112,86516,93046,]
 
-    removed_lids = [91116, 87551, 92885, 93752, 94922, 81082, 91081, 89227, 89228, 88721, 88720, 89385, 89384,89387]
-    # print(str(odEffect(7789, 7251, [83443, 84145])))
-    # print(str(odEffect(6772, 6773, [83443, 84145])))
+    # Tranebergsbron
+    #removed_lids = [82697, 82717]
 
-    # removed_lids = [83481]
+    #Götgatan
+    #removed_lids = [89227, 89228]
+
+
+    #Gröndalsbron söder
+    #removed_lids = [83481]
 
     print("Mac: ", get_mac())
     #För att ta reda på vilken tabell som ska arbetas med:
