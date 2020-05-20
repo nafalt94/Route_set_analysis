@@ -63,14 +63,12 @@ def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
             print("Finished with " + str(100*i / len(origins)) + "% kl: " + dt_string)
 
-        # effect = odEffect(origins[i], destinations[i], removed_lid_string,tabel_nr)
-        # if effect != -1:
-        #     sum += effect
-        #     count += 1
-        # else:
-        #     sum_all_affected += 1
-
-        sum_all_affected += 1
+        effect = odEffect(origins[i], destinations[i], removed_lid_string,tabel_nr)
+        if effect != -1:
+            sum += effect
+            count += 1
+        else:
+            sum_all_affected += 1
 
 
         #if last iteration, terminate and if last pair of current start_zone, update and go to next
@@ -150,9 +148,9 @@ def affected_pairs(lids,tabel_nr):
 
 # Connection global to be used everywhere.
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
