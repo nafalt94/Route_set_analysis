@@ -163,7 +163,7 @@ def main():
     # Gamla lids
     # removed_lids = [83025, 84145, 83443, 82268, 82267]
     # Gröndalsbron
-    #removed_lids = [82763, 83481]
+    removed_lids = [82763, 83481]
 
     #Gröndalsbron endast södergående
     # removed_lids = [83481]
@@ -194,7 +194,7 @@ def main():
     # list.append(7789)
     # list.append(7251)
     # print(str(list))
-    removed_lids = [89227, 89228]
+    #removed_lids = [89227, 89228]
     # print(str(odEffect(7789, 7251, [83443, 84145])))
     # print(str(odEffect(6772, 6773, [83443, 84145])))
 
