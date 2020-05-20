@@ -40,7 +40,8 @@ def removeRoutesLayers():
                 and str(layer.name()) != "OpenStreetMap" and str(layer.name()) != "all_results" and str(
             layer.name()) != "Centroider" and str(layer.name()) != "dijk_result_table" and str(layer.name()) != "ata_lid"\
                 and str(layer.name()) != "Link used by 3 shortest paths" and str(layer.name()) != "Link used by 0 shortest paths"\
-                and str(layer.name()) != "OD_pairs" and str(layer.name()) != "failed_start_zones" and str(layer.name()) != "clickable":
+                and str(layer.name()) != "OD_pairs" and str(layer.name()) != "failed_start_zones" and str(layer.name()) != "clickable" \
+                and str(layer.name()) != "betweenness":
             QgsProject.instance().removeMapLayer(layer.id())
 
 #Vet inte om dessa två behövs..
@@ -57,20 +58,39 @@ def printRoutes(nr_routes):
 # Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
 def fetchResults(emme_result,max_failed):
 
+    # ############################ Create layer for mean deterioration
+    # sqlcall = "(SELECT *, CASE WHEN mean_deterioration = 0 THEN 0 ELSE mean_deterioration - 1 END as mean_det " \
+    #           " FROM "+str(emme_result)+" WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit " \
+    #           " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > "+str(max_failed)+" ))"
+    # uri.setDataSource("", sqlcall, "geom", "", "id")
+    #
+    # layer = QgsVectorLayer(uri.uri(), "Mean deterioration ", "postgres")
+    # QgsProject.instance().addMapLayer(layer)
+    #
+    # ## create the renderer and assign it to a layer
+    # expression = 'mean_det'  # field name
+    # myRenderer = QgsGraduatedSymbolRenderer(expression)
+    # myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
+    # # using color ramp visspec
+    # ramp = QgsCptCityColorRamp("cb/seq/BuGn_09", "", False, True)
+    # # ramp = QgsGradientColorRamp.clone()
+    # myRenderer.updateColorRamp(ramp)
+    # layer.setRenderer(myRenderer)
+
     ############################ Create layer for mean deterioration
-    sqlcall = "(SELECT * FROM "+str(emme_result)+" WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit " \
-              " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > "+str(max_failed)+" ))"
+    sqlcall = "(SELECT * FROM " + str(emme_result) + " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit " \
+                       " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > " + str(max_failed) + " ))"
     uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "Mean deterioration ", "postgres")
+    layer = QgsVectorLayer(uri.uri(), "Mean deterioration", "postgres")
     QgsProject.instance().addMapLayer(layer)
 
     ## create the renderer and assign it to a layer
-    expression = 'mean_deterioration'  # field name
+    expression = 'mean_deterioration_all'  # field name
     myRenderer = QgsGraduatedSymbolRenderer(expression)
     myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
     # using color ramp visspec
-    ramp = QgsCptCityColorRamp("cb/seq/Reds_06", "", False, True)
+    ramp = QgsCptCityColorRamp("cb/seq/BuGn_09", "", False, True)
     # ramp = QgsGradientColorRamp.clone()
     myRenderer.updateColorRamp(ramp)
     layer.setRenderer(myRenderer)
@@ -94,48 +114,7 @@ def fetchResults(emme_result,max_failed):
     myRenderer.updateColorRamp(ramp)
     layer.setRenderer(myRenderer)
 
-    ############################ Create layer for "factor score"
-    sqlcall = "(select *, CASE WHEN mean_deterioration = -1 and nr_affected > 0 THEN " \
-              " -1 ELSE cast(mean_deterioration-1 as float) * cast(nr_affected as float)/cast((SELECT count(distinct zone) " \
-              " FROM " + str(emme_result) + ") as float)  END as factor_score from " + str(emme_result) + "" \
-                    " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > " + str(
-        max_failed) + ") )"
-    uri.setDataSource("", sqlcall, "geom", "", "id")
 
-    layer = QgsVectorLayer(uri.uri(), "Proportion of affected destinations * Mean deterioration", "postgres")
-    QgsProject.instance().addMapLayer(layer)
-
-    ## create the renderer and assign it to a layer
-    expression = 'factor_score'  # field name
-    myRenderer = QgsGraduatedSymbolRenderer(expression)
-    myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
-    myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
-    # using color ramp visspec
-    ramp = QgsCptCityColorRamp("cb/seq/Purples_06", "", False, True)
-    # ramp = QgsGradientColorRamp.clone()
-    myRenderer.updateColorRamp(ramp)
-    layer.setRenderer(myRenderer)
-
-
-    ############################ Create layer for redirection zones
-    sqlcall = "(select *, CASE WHEN mean_deterioration = -1 and nr_affected > 0 THEN " \
-              " -1 ELSE cast(nr_affected as float)/cast((SELECT count(distinct zone) " \
-              " FROM " + str(emme_result) + ") as float)/(1-cast(mean_deterioration-1 as float))  END as factor_score_invers from " + str(emme_result) + "" \
-               " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit where status = 3 GROUP BY origin, assigned_to HAVING count(*) > " + str(
-        max_failed) + ") )"
-    uri.setDataSource("", sqlcall, "geom", "", "id")
-
-    layer = QgsVectorLayer(uri.uri(), "High prop, low mean det", "postgres")
-    QgsProject.instance().addMapLayer(layer)
-
-    ## create the renderer and assign it to a layer
-    expression = 'factor_score_invers'  # field name
-    myRenderer = QgsGraduatedSymbolRenderer(expression)
-    myRenderer.setMode(QgsGraduatedSymbolRenderer.Jenks)
-    myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
-    ramp = QgsCptCityColorRamp("cb/seq/Greens_09", "", False, True)
-    myRenderer.updateColorRamp(ramp)
-    layer.setRenderer(myRenderer)
 
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
@@ -170,8 +149,11 @@ def main():
         #Max allowed # of failing OD-pairs for zone to be included in analysis
         max_failed = 1160
 
-        emme_result = "emme_results_grondals_soder"
-        emme_result = "emme_results_hela_sodermalm"
+
+        emme_result = "emme_results_tranebergsbron"
+        emme_result = "emme_results_gotgatan"
+        emme_result = "emme_results"
+        emme_result = "emme_results_grondals_endast_soder"
 
         # Variable definitions
         fetchResults(emme_result,max_failed)
