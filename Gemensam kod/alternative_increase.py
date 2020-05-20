@@ -84,20 +84,20 @@ def add_to_table(list, lids, tabel_nr):
             print("Finished with " + str(round(i / np.size(list, 1), 2)) + " time: " + dt_string)
 
         # För alla alternativa rutter
-        cur_remote.execute(
-            "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
-                tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
-                " did NOT IN (select did from remote_results" + str(
-                tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
-                list[1][i]) + " AND " + removed_lid_string + ")")
+        # cur_remote.execute(
+        #     "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
+        #         tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
+        #         " did NOT IN (select did from remote_results" + str(
+        #         tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
+        #         list[1][i]) + " AND " + removed_lid_string + ")")
 
         # För näst bästa alternativet som inte använder removed lids.
-        # cur_remote.execute(
-        #         "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
-        #             tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
-        #             " did NOT IN (select did from remote_results" + str(
-        #             tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
-        #             list[1][i]) + " AND " + removed_lid_string + ")")
+        cur_remote.execute(
+                "INSERT INTO increasing_alternative" + str(tabel_nr) + " select lid from remote_results" + str(
+                    tabel_nr) + " WHERE start_zone = " + str(list[0][i]) + " AND end_zone = " + str(list[1][i]) + " AND "
+                    " did NOT IN (select did from remote_results" + str(
+                    tabel_nr) + " where start_zone = " + str(list[0][i]) + " AND end_zone = " + str(
+                    list[1][i]) + " AND " + removed_lid_string + ")")
 
         i += 1
 
@@ -161,20 +161,20 @@ def add_to_table_start_zone(list, lids):
         #         list[1][i]) + " AND " + removed_lid_string + ")")
 
         # För näst bästa alternativet som inte använder removed lids.
-        # cur_remote.execute("INSERT INTO increasing_alternative select lid, count(*) from "
-        # "(SELECT p.did, p.start_zone, p.end_zone, p.lid, p.link_cost, p.path_seq "
-        # "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
-        # "and (did, end_zone) in (select distinct max(did) + 1, end_zone "
-        # "from partitioned_results where " + removed_lid_string + " and start_zone = " + str(list[0][i]) + " group by "
-        # "end_zone)) b group by lid ON CONFLICT(lid) DO UPDATE SET count = excluded.count + increasing_alternative.count")
+        cur_remote.execute("INSERT INTO increasing_alternative select lid, count(*) from "
+        "(SELECT p.did, p.start_zone, p.end_zone, p.lid, p.link_cost, p.path_seq "
+        "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
+        "and (did, end_zone) in (select distinct max(did) + 1, end_zone "
+        "from partitioned_results where " + removed_lid_string + " and start_zone = " + str(list[0][i]) + " group by "
+        "end_zone)) b group by lid ON CONFLICT(lid) DO UPDATE SET count = excluded.count + increasing_alternative.count")
 
         # TEST MED räkna start zoner
-        cur_remote.execute("INSERT INTO increasing_alternative select end_zone from "
-                           "(SELECT distinct p.start_zone, p.end_zone, p.did "
-                           "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
-                            "and (did, end_zone) in (select distinct max(did) + 1 , end_zone "
-                            "from partitioned_results where  "+removed_lid_string+" and start_zone = " + str(list[0][i]) + " "
-													"group by end_zone)) b")
+        # cur_remote.execute("INSERT INTO increasing_alternative select end_zone from "
+        #                    "(SELECT distinct p.start_zone, p.end_zone, p.did "
+        #                    "FROM partitioned_results p WHERE start_zone = " + str(list[0][i]) + " "
+        #                     "and (did, end_zone) in (select distinct max(did) + 1 , end_zone "
+        #                     "from partitioned_results where  "+removed_lid_string+" and start_zone = " + str(list[0][i]) + " "
+		# 											"group by end_zone)) b")
 
 
         i += 1
@@ -227,15 +227,15 @@ def main():
     #För att ta reda på vilken tabell som ska arbetas med:
     # cur_remote.execute("SELECT update_order FROM insert_status WHERE mac = " + str(get_mac()))
     # tabel_nr = cur_remote.fetchone()[0]
-    # tabel_nr = 1
+    tabel_nr = 1
     cur_remote.execute("DROP TABLE if exists increasing_alternative")
 
-    lists = affected_pairs_start_zone(removed_lids)
+    lists = affected_pairs(removed_lids,tabel_nr)
 
 
     print("Number of start zones effected " + str(np.size(lists,1)))
 
-    add_to_table_start_zone(lists, removed_lids)
+    add_to_table(lists, removed_lids,tabel_nr)
 
     #print(str(affected_pairs(removed_lids)[0]))
     toc()
