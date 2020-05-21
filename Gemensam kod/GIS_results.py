@@ -153,7 +153,6 @@ def main():
         emme_result = "emme_results_tranebergsbron"
         emme_result = "emme_results_gotgatan"
         emme_result = "emme_results"
-        emme_result = "emme_results_grondals_endast_soder"
 
         # Variable definitions
         fetchResults(emme_result,max_failed)
