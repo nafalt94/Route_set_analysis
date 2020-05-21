@@ -52,12 +52,7 @@ def createEmmeResults(zones, removed_lids,tabel_nr):
     print_count = 1
 
     while i < len(zones):
-
-        if i == round(print_count * len(zones) / 100):
-            print_count += 1
-            now = datetime.now()
-            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-            print("Finished with " + str(100 * i / len(zones)) + "% kl: " + dt_string)
+        print(str(i),"%")
 
         #lista med alla påverkade OD-par för zon i origins
         list_affected = affected_pairs(zones[i],removed_lid_string)
