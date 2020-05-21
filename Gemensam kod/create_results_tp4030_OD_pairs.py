@@ -52,7 +52,9 @@ def createEmmeResults(zones, removed_lids,tabel_nr):
     print_count = 1
 
     while i < len(zones):
-        print(str(i),"%")
+        now = datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        print(str(i)+" zoner klara och tid är: " + dt_string)
 
         #lista med alla påverkade OD-par för zon i origins
         list_affected = affected_pairs(zones[i],removed_lid_string)
@@ -153,9 +155,9 @@ def affected_pairs(zone,removed_lid_string):
 
 # Connection global to be used everywhere.
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
@@ -187,7 +189,7 @@ def main():
     #removed_lids = [91116, 87551, 92885, 93752, 94922, 81082, 91081, 89227, 89228, 88721, 88720, 89385, 89384, 89387]
 
     #Norrtälje
-    removed_lids = [81800, 83401]
+    #removed_lids = [81800, 83401]
 
     #Alla överfarter till södermalm
     # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
