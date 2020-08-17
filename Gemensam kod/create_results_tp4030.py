@@ -33,13 +33,7 @@ def tic():
 # Initialize TicToc function.
 TicToc = TicTocGenerator()
 
-def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
-
-    # Här vill jag skapa nytt lager som visar intressanta saker för varje zon
-    # Create emme_result table
-    # cur_remote.execute("DROP table if exists emme_results")
-    # cur_remote.execute("SELECT 0 as nr_non_affected, 0 as nr_no_routes, 0 as nr_all_routes_affected, 0.0 "
-    #                    "as mean_deterioration, 0 as nr_pairs,* INTO emme_results FROM emme_zones")
+def updateEmmeResults(origins,destinations, removed_lids,tabel_nr):
 
     removed_lid_string = "( lid = " + str(removed_lids[0])
     i = 1
@@ -80,7 +74,6 @@ def createEmmeResults(origins,destinations, removed_lids,tabel_nr):
             else:
                 mean_det = sum/count
 
-            #För att inkludera nollor..
             #1125 is the number of distinct end_zones
             mean_det_all = sum / 1125
 
@@ -102,16 +95,12 @@ def odEffect(start, end, removed_lid_string,tabel_nr):
                       " start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND "
                     " did NOT IN (select did from remote_results"+str(tabel_nr)+" where start_zone = "+str(start_zone)+" AND end_zone = "+str(end_zone)+" AND  "+ removed_lid_string+ ")")
 
+    #id of the best alternative route
     id_alt = str(cur_remote.fetchone()[0])
-    #print("id_alt är: "+ id_alt)
-    #print("start är " + str(start))
 
     if id_alt == "None":
-        #print("gick in för none")
         return -1
     else:
-        # print("Zon påverkas och bästa id är:" + id_alt)
-
         # Fetching cost of the optimal route and the alternative
         cur_remote.execute("SELECT sum(link_cost) from remote_results"+str(tabel_nr)+" where "
                           " (start_zone = " + str(start_zone) + " AND end_zone = " + str(end_zone) + ") AND "
@@ -123,7 +112,6 @@ def odEffect(start, end, removed_lid_string,tabel_nr):
         cost_alt = str(cur_remote.fetchone()[0])
 
         # Proportion of extra cost of alternative route in relation to opt route
-        # print("cost_opt = " + cost_opt + " and cost_alt = " + cost_alt)
         return (float(cost_alt) / float(cost_opt))
 
 def affected_pairs(lids,tabel_nr):
@@ -136,9 +124,10 @@ def affected_pairs(lids,tabel_nr):
         i += 1
     removed_lid_string += ")"
 
-    # ORDER BY verkar ta tid. Att göra: indexera remote_results på start_zone
+    #Fetch OD-pairs that are affected by the road capacity reduction
     cur_remote.execute("select distinct start_zone,end_zone from remote_results"+str(tabel_nr)+" where " + removed_lid_string+" and did = 1 order by start_zone ")
 
+    #All affected OD-pairs
     all_pairs = cur_remote.fetchall()
     origins = [r[0] for r in all_pairs]
     destinations = [r[1] for r in all_pairs]
@@ -148,9 +137,9 @@ def affected_pairs(lids,tabel_nr):
 
 # Connection global to be used everywhere.
 #TP4030
-#conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
+conn_remote = psycopg2.connect(host="192.168.1.10", database="mattugusna", user="mattugusna", password="password123")
 #Gustav och Mattias
-conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
+#conn_remote = psycopg2.connect(host="localhost", database="mattugusna", user="mattugusna", password="password123", port=5455)
 conn_remote.autocommit = True
 cur_remote = conn_remote.cursor()
 
@@ -158,16 +147,11 @@ cur_remote = conn_remote.cursor()
 def main():
     tic()
 
-    # Gamla lids
-    # removed_lids = [83025, 84145, 83443, 82268, 82267]
     # Gröndalsbron
     #removed_lids = [82763, 83481]
 
     #Gröndalsbron endast södergående
     # removed_lids = [83481]
-
-    #Tranebergsbron
-    #removed_lids = [82697,82717]
 
     #Götgatan
     #removed_lids = [91116, 87551, 92885, 93752, 94922, 81082, 91081, 89227, 89228, 88721, 88720, 89385, 89384, 89387]
@@ -176,28 +160,12 @@ def main():
     #removed_lids = [89227, 89228]
 
     #Tranebergsbron
-    #removed_lids = [82697, 82717]
-
-    #Götgatan
-    #removed_lids = [91116, 87551, 92885, 93752, 94922, 81082, 91081, 89227, 89228, 88721, 88720, 89385, 89384, 89387]
-
-    #Norrtälje
-    removed_lids = [81800, 83401]
+    removed_lids = [82697, 82717]
 
     #Alla överfarter till södermalm
     # removed_lids = [82587, 83042,87369,89102,91089,94139,94140,
     #                 95360,95361,80922,83802,82323,82386,87551,89520,
     #                 89519,91116,90016,90112,86516,93046,]
-
-    # cur_remote.execute("select start_zone from remote_results group by start_zone limit 10")
-    # all_zones = cur_remote.fetchall()
-    # list = [r[0] for r in all_zones]
-    # list.append(7789)
-    # list.append(7251)
-    # print(str(list))
-    #removed_lids = [89227, 89228]
-    # print(str(odEffect(7789, 7251, [83443, 84145])))
-    # print(str(odEffect(6772, 6773, [83443, 84145])))
 
 
     #För att ta reda på vilken tabell som ska arbetas med:
@@ -206,7 +174,9 @@ def main():
 
     lists = affected_pairs(removed_lids,tabel_nr)
     print("klart med lista")
-    createEmmeResults(lists[0],lists[1], removed_lids,tabel_nr)
+
+    #Updates the affected OD-pair with mean deterioration and proportion of affected destinations
+    updateEmmeResults(lists[0],lists[1], removed_lids,tabel_nr)
     print("Klar")
 
     #print(str(affected_pairs(removed_lids)[0]))
