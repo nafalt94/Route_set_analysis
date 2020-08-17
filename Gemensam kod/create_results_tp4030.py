@@ -173,11 +173,11 @@ def main():
     tabel_nr = cur_remote.fetchone()[0]
 
     lists = affected_pairs(removed_lids,tabel_nr)
-    print("klart med lista")
+    print("Finished with list")
 
     #Updates the affected OD-pair with mean deterioration and proportion of affected destinations
     updateEmmeResults(lists[0],lists[1], removed_lids,tabel_nr)
-    print("Klar")
+    print("Finished")
 
     #print(str(affected_pairs(removed_lids)[0]))
     toc()
