@@ -65,16 +65,6 @@ def genonenode(zone):
         node = result[0]
     else:
         raise Exception('No node in zones:' + str(zone))
-        # print("No node in zones:"+ str(zone))
-        # node = -1
-    # # Saving SQL answer into matrix
-    # while query1.next():
-    #     counter1 += 1
-    #     # print("node is :" + str(query1.value(0)))
-    #     node = query1.value(0)
-    #
-    # if counter1 != 1:
-    #     raise Exception('No  node in Zones and startnode is:' + str(zone))
 
     return node
 
@@ -89,9 +79,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
 
     start = genonenode(start_zone)
     end = genonenode(end_zone)
-    # print("Start zone is:"+str(start_zone))
-    # print("End zone is:"+str(end_zone))
-    # print("Start node is: "+str(start)+" End node is: "+str(end))
 
     cur.execute("DROP TABLE if exists temp_table1")
     # Route 1
@@ -100,18 +87,14 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
      INNER JOIN cost_table ON(edge = lid)")
 
 
-
     # Getting total cost for route 1 and setting first stop criterion.
     cur.execute("SELECT sum(link_cost) FROM temp_table1")
-
     route1_cost = cur.fetchone()[0]
-    # print("Current cost route 1: " + str(route1_cost))
     route_stop = route1_cost
 
 
     # Result table creating
     if route_stop is None:
-        # print("No route BEFORE WHILE LOOP")
         cur.execute("DROP TABLE if exists result_table")
 
     else:
@@ -120,12 +103,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         geom, cost, link_cost,start_node, end_node, path_seq, agg_cost, speed, fcn_class INTO \
         result_table FROM temp_table1")
 
-        # # Pen cost as breaking if stuck instead of nr_routes
-        # pen_q = db.exec_("SELECT SUM(cost) from temp_table1")
-        # pen_q.next()
-        # # print("Pencost för rutt: "+str(pen_q.value(0)))
-        # pen_stop = pen_q.value(0)
-
         # Calculationg alternative routes
         i = 2
         nr_routes = 1
@@ -133,9 +110,7 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         # Count if overlap and nr_route is the same too many times (short OD-pairs with no routes)
         overlap_count = 0
 
-        # while comp(route_stop, route1_cost, threshold):
         while True:
-            #print("Route stop is ="+str(route_stop)+" and distance is ="+str(distance))
             if nr_routes >= 100 or route_stop is None or route_stop > 1000000:
                 if nr_routes >= 100:
                     print("Warning: The number of routes was over 100 for start zone: \
@@ -151,9 +126,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             # Delta value
             cur.execute("Select COUNT(*) from result_table")
             delta = cur.fetchone()[0]
-
-            #print("DELTA VALUE IS =:"+str(delta))
-            # Parameter
 
             # Route 2
             cur.execute("DROP TABLE if exists temp_table2")
@@ -172,11 +144,6 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
             INNER JOIN cost_table ON cost_table.lid = temp_table2.lid;")
             route_stop = cur.fetchone()[0]
 
-            # print("Current cost route " + str(i) + ": " + str(route_stop))
-
-            # if route_stop < route1_cost:
-            #     break
-
 
             if comp(route_stop, route1_cost, threshold):
 
@@ -193,10 +160,8 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
                             path_seq, agg_cost, speed, fcn_class FROM temp_table2")
                     i = i + 1
                     nr_routes = nr_routes + 1
-                    # print("HÄR ÄR VI")
                     overlap_count = 0
                 else:
-                    # print("OVERLAP STOP")
                     cur.execute(
                         "INSERT INTO result_table SELECT -1 AS did, " + str(start_zone) + " AS start_zone, "
                         + str(end_zone) + " AS end_zone, lid, node, geom, cost, link_cost, start_node, end_node, \
@@ -216,17 +181,13 @@ def routeSetGeneration(start_zone, end_zone, my, threshold,max_overlap):
         # No problems
         return 1
     # No route available
-
     return 3
 
 
 def fetch_update(limit):
+
     mac = get_mac()
 
-    #Check if any assignments needs to be finished
-    # cur_remote.execute("SELECT origin, destination FROM all_od_pairs_order WHERE status = "+str(mac))
-    # assignment = cur_remote.fetchall()
-    #print("assignment: "+str(assignment))
     intervals = [6772, 6864, 6956, 7048, 7140, 7232, 7324, 7416, 7508, 7600, 7692, 7784, 7876, 7968, 8012]
 
     cur_remote.execute("SELECT min(origin) FROM all_od_pairs_order WHERE status = -1")
@@ -238,14 +199,7 @@ def fetch_update(limit):
         if min_origin >= intervals[x] and min_origin < intervals[x+1]:
             max_origin = intervals[x+1]
             min_id = i;
-            print(str(max_origin))
         i += 1
-
-    #Hårdkodat
-    # min_id = 14
-    # min_origin = 7968
-    # max_origin = 8060
-
 
     cur_remote.execute("WITH cte AS (select * from all_od_pairs_order "
                     "where origin >= " + str(min_origin) + " and origin < " + str(max_origin) + ") "
@@ -255,6 +209,7 @@ def fetch_update(limit):
     assignment = cur_remote.fetchall()
     cur_remote.execute("UPDATE insert_status SET fetch_time = null WHERE mac = " + str(get_mac()))
     conn_remote.commit()
+
     return assignment, min_id
 
 def generate_assignments(my, threshold, max_overlap,assignment):
@@ -296,40 +251,21 @@ def update_result(assignment, status):
 
 def copy_into_table(table, rows):
 
-    # cur_remote.execute("CREATE TEMP TABLE IF NOT EXISTS copy_temp_table(did INT, start_zone INT, end_zone INT, lid BIGINT, node BIGINT,"
-    #                    " geom geometry,cost double precision,link_cost DOUBLE PRECISION, start_node BIGINT, end_node BIGINT,path_seq INT,agg_cost DOUBLE PRECISION,"
-    #                    "speed numeric, fcn_class BIGINT, PRIMARY KEY (start_zone, end_zone,did, path_seq))")
-    print("tid 3")
     sio = StringIO()
     sio.write('\n'.join('%s %s %s %s %s %s' % x for x in rows))
-    print("tid 4")
     sio.seek(0)
-    print("tid 5")
     cur_remote.copy_from(sio, table, sep =' ')
-    print("tid 6")
     conn_remote.commit()
-    print("tid 7")
     print("Results inserted!")
-    print("tid 8")
     cur_remote.execute("UPDATE insert_status SET insert_time = null WHERE mac = " + str(get_mac()))
-    print("tid 9")
     conn_remote.commit()
-    print("tid 10")
-    # print("3 fast")
-    # cur_remote.execute("BEGIN TRANSACTION; "
-    #                    "INSERT into "+table+" select * from copy_temp_table ON CONFLICT DO NOTHING; COMMIT ;")
-    # conn_remote.commit()
-
 
 def copy_into_special(min_id):
     cur.execute("SELECT did, start_zone, end_zone, lid, link_cost, path_seq  FROM all_results")
 
     rows = []
-    i = 0
-    print("tid 1")
     for x in cur.fetchall():
         rows.append(x)
-    print("tid 2")
     copy_into_table("remote_results"+str(min_id), rows)
 
 def order(type):
@@ -351,10 +287,10 @@ def order(type):
 # Connection global to be used everywhere.
 #TP4030
 
-#conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
+conn = psycopg2.connect(host="localhost", database="mattugusna", user="postgres")
 
 #Gustav och Mattias
-conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
+#conn = psycopg2.connect(host="localhost", database="exjobb", user="postgres", password="password123",port=5432)
 
 conn.autocommit = True
 cur = conn.cursor()
@@ -371,6 +307,7 @@ cur_remote = conn_remote.cursor()
 def main():
     tic()
     print("Mac: ",get_mac())
+
     # Variable definitions
     my = 0.01
     threshold = 1.3
@@ -381,8 +318,6 @@ def main():
     cur.execute("DROP TABLE if exists cost_table")
     cur.execute("DROP TABLE IF EXISTS od_lid")
 
-    i = 0
-#   while i < 1:
 
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
@@ -391,28 +326,30 @@ def main():
     try:
         while order('fetch_time') is not True:
            dummy = 1
+
+        #Fetches OD-pairs that is not fetched by any other computer and updates the status to taken
         assignment, min_id = fetch_update(limit)
 
-        print(str(len(assignment)/1000))
         split_assignment = np.array_split(assignment, math.ceil(len(assignment)/1000))
 
-        i = 0
         for x in split_assignment:
-            print("min id", min_id)
+            print("my id", min_id)
+            #Generate route sets for OD-pair x in assignment
+            # status = 1 if generation succeeds and 3 otherwise
             status = generate_assignments(my, threshold, max_overlap, x)
             update_result(x, status)
 
+            #Time feedback
             now = datetime.now()
             dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
             print("uppdaterat "+str(limit)+"st kl: " + dt_string)
 
+            #Insert results in dedicated table on remote database
             copy_into_special(min_id)
             cur.execute("DROP TABLE if exists all_results")
     except Exception as exptest:
         conn_remote.commit()
         print("Exception  " + str(exptest))
-
-
 
 
 if __name__ == "__main__" or __name__ == "__console__":
