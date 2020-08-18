@@ -44,7 +44,6 @@ def removeRoutesLayers():
                 and str(layer.name()) != "betweenness":
             QgsProject.instance().removeMapLayer(layer.id())
 
-#Vet inte om dessa två behövs..
 # Prints a route set based on whats in result_table.
 def printRoutes(nr_routes):
     i = 1
@@ -55,27 +54,8 @@ def printRoutes(nr_routes):
         QgsProject.instance().addMapLayer(layert)
         i = i + 1
 
-# Analysing all-to-all result for list and removed lid  # CANT decide where this should go either gis_layer or python.
+# Analysing all-to-all result for list and removed lid
 def fetchResults(emme_result,max_failed):
-
-    # ############################ Create layer for mean deterioration
-    # sqlcall = "(SELECT *, CASE WHEN mean_deterioration = 0 THEN 0 ELSE mean_deterioration - 1 END as mean_det " \
-    #           " FROM "+str(emme_result)+" WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit " \
-    #           " where status = 3 GROUP BY origin, assigned_to  HAVING count(*) > "+str(max_failed)+" ))"
-    # uri.setDataSource("", sqlcall, "geom", "", "id")
-    #
-    # layer = QgsVectorLayer(uri.uri(), "Mean deterioration ", "postgres")
-    # QgsProject.instance().addMapLayer(layer)
-    #
-    # ## create the renderer and assign it to a layer
-    # expression = 'mean_det'  # field name
-    # myRenderer = QgsGraduatedSymbolRenderer(expression)
-    # myRenderer.updateClasses(layer, QgsGraduatedSymbolRenderer.Jenks, 5)
-    # # using color ramp visspec
-    # ramp = QgsCptCityColorRamp("cb/seq/BuGn_09", "", False, True)
-    # # ramp = QgsGradientColorRamp.clone()
-    # myRenderer.updateColorRamp(ramp)
-    # layer.setRenderer(myRenderer)
 
     ############################ Create layer for mean deterioration
     sqlcall = "(SELECT * FROM " + str(emme_result) + " WHERE id NOT IN (SELECT origin FROM all_od_pairs_order_speed_limit " \
@@ -114,8 +94,6 @@ def fetchResults(emme_result,max_failed):
     myRenderer.updateColorRamp(ramp)
     layer.setRenderer(myRenderer)
 
-
-
 # DATABASE CONNECTION ------------------------------------------------------
 uri = QgsDataSourceUri()
 # set host name, port, database name, username and password
@@ -149,10 +127,10 @@ def main():
         #Max allowed # of failing OD-pairs for zone to be included in analysis
         max_failed = 1160
 
-
+        #Specify which of the result tables to visualize (which links that are inputted)
         emme_result = "emme_results_tranebergsbron"
         emme_result = "emme_results_gotgatan"
-        emme_result = "emme_results"
+        #emme_result = "emme_results"
 
         # Variable definitions
         fetchResults(emme_result,max_failed)
